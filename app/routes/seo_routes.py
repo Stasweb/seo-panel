@@ -1,57 +1,29 @@
-from fastapi import APIRouter, Depends, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter
 from app.services.seo_service import seo_service
-from typing import Optional
+from app.schemas.schemas import DensityRequest, MetaRequest, AuditRequest, AuditResult
+from typing import Any, Dict, List
 
 router = APIRouter(prefix="/seo", tags=["seo"])
-templates = Jinja2Templates(directory="app/templates")
 
-@router.get("/tools", response_class=HTMLResponse)
-async def seo_tools(request: Request):
+@router.post("/density")
+async def keyword_density(payload: DensityRequest) -> Dict[str, Any]:
     """
-    SEO tools main page.
+    Calculate keyword density.
     """
-    return templates.TemplateResponse("seo/tools.html", {"request": request})
+    density = seo_service.calculate_keyword_density(payload.text)
+    return {"density": density}
 
-@router.post("/tools/density", response_class=HTMLResponse)
-async def keyword_density(
-    request: Request,
-    text: str = Form(...)
-):
+@router.post("/meta")
+async def generate_meta(payload: MetaRequest) -> Dict[str, Any]:
     """
-    Calculate keyword density (HTMX).
+    Generate meta description.
     """
-    density = seo_service.calculate_keyword_density(text)
-    return templates.TemplateResponse(
-        "seo/partials/density_results.html", 
-        {"request": request, "density": density}
-    )
+    meta = seo_service.generate_meta_description(payload.content, max_length=payload.max_length)
+    return {"meta": meta, "length": len(meta)}
 
-@router.post("/tools/meta-gen", response_class=HTMLResponse)
-async def generate_meta(
-    request: Request,
-    content: str = Form(...)
-):
+@router.post("/audit", response_model=AuditResult)
+async def audit_url(payload: AuditRequest):
     """
-    Generate meta description (HTMX).
+    Quick audit for a single URL.
     """
-    meta = seo_service.generate_meta_description(content)
-    return templates.TemplateResponse(
-        "seo/partials/meta_result.html", 
-        {"request": request, "meta": meta}
-    )
-
-@router.post("/audit/check", response_class=HTMLResponse)
-async def audit_url(
-    request: Request,
-    url: str = Form(...)
-):
-    """
-    Quick audit for a single URL (HTMX).
-    """
-    result = await seo_service.check_url(url)
-    return templates.TemplateResponse(
-        "seo/partials/audit_result.html", 
-        {"request": request, "result": result}
-    )
+    return await seo_service.check_url(payload.url)

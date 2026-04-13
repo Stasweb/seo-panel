@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex items-center justify-center px-6">
+    <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+      <h1 class="text-2xl font-bold mb-2">SEO Panel</h1>
+      <p class="text-sm text-gray-500 mb-6">Вход для администратора</p>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Username</label>
+          <input
+            type="text"
+            name="username"
+            autocomplete="username"
+            required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition"
+        >
+          Sign in
+        </button>
+      </form>
+
+      <div id="login-error" class="mt-4 text-sm text-red-600"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const errorEl = document.getElementById("login-error");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.textContent = "";
+      const fd = new FormData(form);
+      const resp = await fetch("/api/auth/login", { method: "POST", body: fd });
+      if (resp.ok) {
+        window.location.href = "/";
+        return;
+      }
+      try {
+        const data = await resp.json();
+        errorEl.textContent = data?.detail ? String(data.detail) : "Login failed";
+      } catch {
+        errorEl.textContent = "Login failed";
+      }
+    });
+  </script>
+</body>
+</html>

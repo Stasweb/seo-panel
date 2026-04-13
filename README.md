@@ -8,7 +8,7 @@
 
 - **Backend:** Python 3.10+ (FastAPI)
 - **DB:** SQLite (Async SQLAlchemy)
-- **Frontend:** Jinja2 + HTMX + Tailwind CSS
+- **Frontend:** Static HTML + HTMX + Tailwind CSS
 - **HTTP Client:** HTTPX
 
 ---

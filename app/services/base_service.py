@@ -1,6 +1,6 @@
 from typing import TypeVar, Type, Generic, List, Optional, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from pydantic import BaseModel
 from app.core.database import Base
 
@@ -40,9 +40,8 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: UpdateSchemaType
     ) -> ModelType:
-        obj_data = db_obj.__dict__
         update_data = obj_in.model_dump(exclude_unset=True)
-        for field in obj_data:
+        for field in db_obj.__table__.columns.keys():
             if field in update_data:
                 setattr(db_obj, field, update_data[field])
         db.add(db_obj)

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 
 # Site Schemas
 class SiteBase(BaseModel):
@@ -12,8 +12,11 @@ class SiteBase(BaseModel):
 class SiteCreate(SiteBase):
     pass
 
-class SiteUpdate(SiteBase):
+class SiteUpdate(BaseModel):
     domain: Optional[str] = None
+    cms: Optional[str] = None
+    region: Optional[str] = None
+    notes: Optional[str] = None
 
 class Site(SiteBase):
     model_config = ConfigDict(from_attributes=True)
@@ -30,6 +33,13 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     pass
+
+class TaskUpdate(BaseModel):
+    site_id: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    deadline: Optional[date] = None
 
 class Task(TaskBase):
     model_config = ConfigDict(from_attributes=True)
@@ -85,3 +95,27 @@ class AuditResult(BaseModel):
     h1: Optional[str] = None
     is_indexed: Optional[bool] = None
     last_check: datetime = Field(default_factory=datetime.utcnow)
+
+# API request schemas (JSON-only)
+class DensityRequest(BaseModel):
+    text: str
+
+class MetaRequest(BaseModel):
+    content: str
+    max_length: int = 160
+
+class AuditRequest(BaseModel):
+    url: str
+
+class TitleRequest(BaseModel):
+    title: str
+
+class CSVImportResponse(BaseModel):
+    imported_count: int
+
+class DashboardResponse(BaseModel):
+    sites_count: int
+    tasks_todo: int
+    tasks_in_progress: int
+    content_idea: int
+    last_positions: List[Dict[str, Any]]

@@ -1,6 +1,6 @@
 from app.services.base_service import BaseService
 from app.models.models import Site, Task, ContentPlan, SEOPosition
-from app.schemas.schemas import SiteCreate, SiteUpdate, TaskCreate, TaskBase
+from app.schemas.schemas import SiteCreate, SiteUpdate, TaskCreate, TaskUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Dict, Any
@@ -19,14 +19,14 @@ class SiteService(BaseService[Site, SiteCreate, SiteUpdate]):
         avg_position = await db.scalar(
             select(func.avg(SEOPosition.position)).where(SEOPosition.site_id == site_id)
         )
-        
+
         return {
             "tasks_count": tasks_count or 0,
             "content_count": content_count or 0,
             "avg_position": round(float(avg_position), 2) if avg_position else 0.0
         }
 
-class TaskService(BaseService[Task, TaskCreate, TaskBase]):
+class TaskService(BaseService[Task, TaskCreate, TaskUpdate]):
     pass
 
 site_service = SiteService(Site)

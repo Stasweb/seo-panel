@@ -1,100 +1,181 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ru">
 
-{% block title %}Dashboard{% endblock %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 
-{% block content %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- Sites Card -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 uppercase">Sites</span>
-            <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🌐</span>
-        </div>
-        <div class="text-2xl font-bold">{{ overview.sites_count }}</div>
-    </div>
-    
-    <!-- Tasks Todo Card -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 uppercase">Tasks Todo</span>
-            <span class="p-2 bg-yellow-100 rounded-lg text-yellow-600">📝</span>
-        </div>
-        <div class="text-2xl font-bold">{{ overview.tasks_todo }}</div>
-    </div>
-    
-    <!-- In Progress Card -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 uppercase">In Progress</span>
-            <span class="p-2 bg-green-100 rounded-lg text-green-600">⚙️</span>
-        </div>
-        <div class="text-2xl font-bold">{{ overview.tasks_in_progress }}</div>
-    </div>
-    
-    <!-- Content Ideas Card -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 uppercase">Content Ideas</span>
-            <span class="p-2 bg-purple-100 rounded-lg text-purple-600">💡</span>
-        </div>
-        <div class="text-2xl font-bold">{{ overview.content_idea }}</div>
-    </div>
-</div>
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm">
+          <a class="text-indigo-700 font-medium" href="/">Dashboard</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Sites</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Logout</a>
+        </nav>
+      </div>
+    </header>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Recent Changes Table -->
-    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="text-lg font-bold mb-4">Recent Position Changes</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
-                    <tr>
-                        <th class="px-4 py-3">Keyword</th>
-                        <th class="px-4 py-3">Position</th>
-                        <th class="px-4 py-3">Date</th>
-                        <th class="px-4 py-3">Source</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm divide-y divide-gray-100">
-                    {% for pos in overview.last_positions %}
-                    <tr>
-                        <td class="px-4 py-3 font-medium">{{ pos.keyword }}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 bg-gray-100 rounded text-gray-600">{{ pos.position }}</span>
-                        </td>
-                        <td class="px-4 py-3 text-gray-500">{{ pos.check_date }}</td>
-                        <td class="px-4 py-3 text-gray-500 uppercase">{{ pos.source }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-gray-400">No data available</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <div id="dashboard-loader" hx-get="/api/dashboard" hx-trigger="load" hx-swap="none" data-render="dashboard">
         </div>
-    </div>
 
-    <!-- Quick Tools Card -->
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 class="text-lg font-bold mb-4">Quick SEO Audit</h3>
-        <form hx-post="/seo/audit/check" hx-target="#audit-result" hx-indicator="#audit-loading" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">URL</label>
-                <input type="text" name="url" placeholder="https://example.com" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-500 uppercase">Sites</span>
+              <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🌐</span>
             </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
-                Check URL
-            </button>
-        </form>
-        
-        <div id="audit-loading" class="htmx-indicator mt-4 flex justify-center">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-        </div>
-        
-        <div id="audit-result" class="mt-4">
-            <!-- Results will be swapped here -->
-        </div>
-    </div>
-</div>
-{% endblock %}
+            <div id="stat-sites" class="text-2xl font-bold">—</div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-500 uppercase">Tasks todo</span>
+              <span class="p-2 bg-yellow-100 rounded-lg text-yellow-600">📝</span>
+            </div>
+            <div id="stat-todo" class="text-2xl font-bold">—</div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-500 uppercase">In progress</span>
+              <span class="p-2 bg-green-100 rounded-lg text-green-600">⚙️</span>
+            </div>
+            <div id="stat-inprogress" class="text-2xl font-bold">—</div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-500 uppercase">Content ideas</span>
+              <span class="p-2 bg-purple-100 rounded-lg text-purple-600">💡</span>
+            </div>
+            <div id="stat-ideas" class="text-2xl font-bold">—</div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Positions history</h3>
+              <a class="text-sm text-gray-500 hover:underline" href="/sites">Manage sites</a>
+            </div>
+            <div hx-get="/api/dashboard/positions-history" hx-trigger="load" hx-swap="none"
+              data-render="positionsChart"></div>
+            <canvas id="positions-chart" height="120"></canvas>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Tasks stats</h3>
+              <a class="text-sm text-gray-500 hover:underline" href="/sites">Manage tasks</a>
+            </div>
+            <div hx-get="/api/dashboard/tasks-stats" hx-trigger="load" hx-swap="none" data-render="tasksChart"></div>
+            <canvas id="tasks-chart" height="120"></canvas>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold mb-4">Recent position changes</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-3">Keyword</th>
+                    <th class="px-4 py-3">Position</th>
+                    <th class="px-4 py-3">Date</th>
+                    <th class="px-4 py-3">Source</th>
+                  </tr>
+                </thead>
+                <tbody id="positions-body" class="text-sm divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-400">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-8">
+            <div>
+              <h3 class="text-lg font-bold mb-4">Quick SEO audit</h3>
+              <form hx-ext="json-enc" hx-post="/api/seo/audit" hx-swap="none" data-render="audit" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">URL</label>
+                  <input type="text" name="url" placeholder="https://example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+                    required />
+                </div>
+                <button type="submit"
+                  class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
+                  Check URL
+                </button>
+              </form>
+              <div id="audit-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-bold mb-4">AI meta generator</h3>
+              <form hx-ext="json-enc" hx-post="/api/ai/meta" hx-swap="none" data-render="meta" class="space-y-4">
+                <textarea name="content" rows="4" placeholder="Paste content…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+                  required></textarea>
+                <button type="submit"
+                  class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
+                  Generate
+                </button>
+              </form>
+              <div id="meta-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-bold mb-4">AI keyword suggestions</h3>
+              <form hx-ext="json-enc" hx-post="/api/ai/keywords" hx-swap="none" data-render="aiKeywords"
+                class="space-y-4">
+                <textarea name="text" rows="4" placeholder="Paste text…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+                  required></textarea>
+                <button type="submit"
+                  class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
+                  Suggest
+                </button>
+              </form>
+              <div id="ai-keywords-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-bold mb-4">Title optimizer</h3>
+              <form hx-ext="json-enc" hx-post="/api/ai/title-check" hx-swap="none" data-render="titleCheck"
+                class="space-y-4">
+                <input type="text" name="title" placeholder="Enter Title…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+                  required />
+                <button type="submit"
+                  class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
+                  Check
+                </button>
+              </form>
+              <div id="title-check-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">
+        SEO Panel
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>
