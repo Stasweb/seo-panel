@@ -1,80 +1,161 @@
-# SEO Studio - Home SEO Management Panel
+# SEO Panel - Home SEO Management Panel
 
-Легковесная SEO-панель для управления небольшим пулом сайтов.
+Легковесная SEO-панель для управления небольшим пулом сайтов (до 5–10 проектов) на маломощном сервере.
 
-## Стек
+---
+
+## 🧱 Стек
+
 - **Backend:** Python 3.10+ (FastAPI)
 - **DB:** SQLite (Async SQLAlchemy)
 - **Frontend:** Jinja2 + HTMX + Tailwind CSS
 - **HTTP Client:** HTTPX
 
-## Установка на Ubuntu Server
+---
+
+## ⚙️ Установка на Ubuntu Server
 
 ### 1. Подготовка системы
+
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install python3-pip python3-venv git -y
 ```
 
+---
+
 ### 2. Клонирование и настройка
+
 ```bash
-git clone <your-repo-url> seo-studio
-cd seo-studio
+git clone https://github.com/Stasweb/seo-panel.git
+cd seo-panel
+
 python3 -m venv venv
 source venv/bin/activate
+
+pip install --upgrade pip
 pip install -r requirements.txt
+
 cp .env.example .env
 ```
 
-### 3. Запуск через Gunicorn (для продакшена)
-Для работы на 1-2 GB RAM рекомендуется использовать Gunicorn с Uvicorn workers.
+---
+
+## 🚀 Запуск
+
+### 🔹 DEV режим (для теста)
 
 ```bash
-pip install gunicorn uvicorn
-gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+uvicorn app.main:app --host 0.0.0.0 --port 8090 --reload
 ```
 
-### 4. Настройка Systemd (автозапуск)
-Создайте файл `/etc/systemd/system/seo-studio.service`:
+---
+
+### 🔹 PRODUCTION (рекомендуется)
+
+Для серверов с 1–2 GB RAM:
+
+```bash
+gunicorn app.main:app \
+  -w 2 \
+  -k uvicorn.workers.UvicornWorker \
+  -b 127.0.0.1:8090 \
+  --timeout 60
+```
+
+👉 Используем порт **8090**, чтобы избежать конфликтов
+
+---
+
+## 🔁 Systemd (автозапуск)
+
+Создай файл:
+
+```bash
+sudo nano /etc/systemd/system/seo-panel.service
+```
 
 ```ini
 [Unit]
-Description=SEO Studio FastAPI App
+Description=SEO Panel FastAPI App
 After=network.target
 
 [Service]
 User=youruser
-Group=www-data
-WorkingDirectory=/home/youruser/seo-studio
-Environment="PATH=/home/youruser/seo-studio/venv/bin"
-ExecStart=/home/youruser/seo-studio/venv/bin/gunicorn app.main:app -w 2 -k uvicorn.workers.UvicornWorker -b 127.0.0.1:8000
+WorkingDirectory=/home/youruser/seo-panel
+Environment="PATH=/home/youruser/seo-panel/venv/bin"
+
+ExecStart=/home/youruser/seo-panel/venv/bin/gunicorn app.main:app \
+  -w 2 \
+  -k uvicorn.workers.UvicornWorker \
+  -b 127.0.0.1:8090
+
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+Запуск:
+
 ```bash
-sudo systemctl enable seo-studio
-sudo systemctl start seo-studio
+sudo systemctl daemon-reload
+sudo systemctl enable seo-panel
+sudo systemctl start seo-panel
 ```
 
-### 5. Nginx (Reverse Proxy)
+Проверка:
+
+```bash
+sudo systemctl status seo-panel
+```
+
+---
+
+## 🌐 Nginx (Reverse Proxy)
+
 ```nginx
 server {
     listen 80;
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8090;
+
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 }
 ```
 
-## Функционал
-- **Сайты:** CRUD управление проектами.
-- **SEO инструменты:** Анализ плотности ключевых слов, генератор Meta Description.
-- **Аналитика:** Импорт CSV из Google Search Console, история позиций.
-- **Проверки:** Быстрый аудит URL (Title, H1, Status Code).
-- **Фоновые задачи:** Автоматическая проверка статуса сайтов каждые 24 часа.
+---
+
+## 📦 Функционал
+
+- **Сайты:** CRUD управление проектами
+- **Задачи:** Мини CRM
+- **Контент-план:** Управление публикациями
+- **SEO инструменты:**
+  - keyword density
+  - генерация meta description
+
+- **Аналитика:**
+  - импорт CSV из Google Search Console
+  - история позиций
+
+- **Проверки:**
+  - HTTP статус
+  - Title / H1
+
+- **Фоновые задачи:**
+  - проверки раз в 24 часа
+
+---
+
+## 💡 Рекомендации
+
+- Для 1–2 GB RAM → не увеличивай workers > 2
+- Используй SQLite только для небольших проектов
+- Для роста → переходи на PostgreSQL
+
+---
