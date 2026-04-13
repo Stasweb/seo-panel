@@ -1,0 +1,31 @@
+<div class="overflow-x-auto border rounded-lg">
+    <table class="w-full text-left text-sm">
+        <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+            <tr>
+                <th class="px-4 py-2">Keyword</th>
+                <th class="px-4 py-2">Count</th>
+                <th class="px-4 py-2">Density</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for item in density %}
+            <tr>
+                <td class="px-4 py-2 font-medium">{{ item.keyword }}</td>
+                <td class="px-4 py-2">{{ item.count }}</td>
+                <td class="px-4 py-2">
+                    <div class="flex items-center">
+                        <span class="mr-2">{{ item.percentage }}%</span>
+                        <div class="w-24 bg-gray-200 rounded-full h-1.5">
+                            <div class="bg-indigo-600 h-1.5 rounded-full" style="width: {{ item.percentage }}%"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" class="px-4 py-4 text-center text-gray-400">No results.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

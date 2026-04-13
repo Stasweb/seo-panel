@@ -1,0 +1,24 @@
+{% for site in sites %}
+<tr id="site-{{ site.id }}" class="hover:bg-gray-50">
+    <td class="px-6 py-4">
+        <a href="/sites/{{ site.id }}" class="font-medium text-indigo-600 hover:text-indigo-900">
+            {{ site.domain }}
+        </a>
+    </td>
+    <td class="px-6 py-4 text-sm text-gray-500">{{ site.cms or '-' }}</td>
+    <td class="px-6 py-4 text-sm text-gray-500">{{ site.region or '-' }}</td>
+    <td class="px-6 py-4 text-right">
+        <button hx-delete="/sites/{{ site.id }}" 
+                hx-target="#site-{{ site.id }}" 
+                hx-swap="outerHTML" 
+                hx-confirm="Are you sure?"
+                class="text-red-500 hover:text-red-700 text-sm font-medium">
+            Delete
+        </button>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="4" class="px-6 py-10 text-center text-gray-400">No sites added yet.</td>
+</tr>
+{% endfor %}
