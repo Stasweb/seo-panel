@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Купленные ссылки</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-indigo-700 font-medium" href="/purchased-links">Купленные ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/tasks">Задачи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-end justify-between">
+            <div class="min-w-[260px]">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Сайт</div>
+              <select id="purchased-site-select" class="rounded-md border-gray-300 text-sm p-2 border w-full"></select>
+            </div>
+            <div class="flex flex-wrap gap-3 items-end">
+              <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="openPurchasedAddModal()">
+                Добавить ссылку
+              </button>
+              <button
+                class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="monitorPurchasedLinksNow()">
+                Проверить сейчас
+              </button>
+              <button id="purchased-auto-btn"
+                class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="togglePurchasedAuto()">
+                Авто-мониторинг: выкл
+              </button>
+            </div>
+          </div>
+          <div id="purchased-action-result" class="mt-3 text-sm text-gray-600"></div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-6 py-3">Источник</th>
+                  <th class="px-6 py-3">Цель</th>
+                  <th class="px-6 py-3">Анкор</th>
+                  <th class="px-6 py-3">Тип</th>
+                  <th class="px-6 py-3">Статус</th>
+                  <th class="px-6 py-3">HTTP</th>
+                  <th class="px-6 py-3">DR</th>
+                  <th class="px-6 py-3">Токсичность</th>
+                  <th class="px-6 py-3">Проверено</th>
+                  <th class="px-6 py-3">История</th>
+                </tr>
+              </thead>
+              <tbody id="purchased-links-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="10" class="px-6 py-10 text-center text-gray-400">Выберите сайт</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div id="purchased-add-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closePurchasedAddModal()"></div>
+          <div class="relative mx-auto mt-24 max-w-2xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div class="text-lg font-bold">Добавить купленную ссылку</div>
+                <button class="text-sm text-gray-500 hover:underline"
+                  onclick="closePurchasedAddModal()">Закрыть</button>
+              </div>
+              <div class="p-6 space-y-4">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Источник (donor URL)</div>
+                  <input id="purchased-add-source" type="text"
+                    class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="https://donor.com/page" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Цель (target URL)</div>
+                  <input id="purchased-add-target" type="text"
+                    class="w-full rounded-md border-gray-300 text-sm p-2 border"
+                    placeholder="по умолчанию главная сайта" />
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Анкор (опц.)</div>
+                    <input id="purchased-add-anchor" type="text"
+                      class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="brand / купить..." />
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Тип</div>
+                    <select id="purchased-add-type" class="w-full rounded-md border-gray-300 text-sm p-2 border">
+                      <option value="">(не важно)</option>
+                      <option value="dofollow">dofollow</option>
+                      <option value="nofollow">nofollow</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">DR (опц.)</div>
+                    <input id="purchased-add-dr" type="number" min="0" max="100"
+                      class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="55" />
+                  </div>
+                </div>
+                <div id="purchased-add-result" class="text-sm text-gray-700"></div>
+              </div>
+              <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+                <button class="text-sm text-gray-600 hover:underline" onclick="closePurchasedAddModal()">Отмена</button>
+                <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                  onclick="submitPurchasedAdd()">
+                  Добавить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="purchased-history-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closePurchasedHistory()"></div>
+          <div class="relative mx-auto mt-16 max-w-4xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div>
+                  <div class="text-lg font-bold">История проверки</div>
+                  <div id="purchased-history-subtitle" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                <button class="text-sm text-gray-500 hover:underline" onclick="closePurchasedHistory()">Закрыть</button>
+              </div>
+              <div class="p-6 space-y-6">
+                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-3">График</div>
+                  <div class="h-56">
+                    <canvas id="purchased-history-chart"></canvas>
+                  </div>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Последние проверки</div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                      <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                        <tr>
+                          <th class="px-4 py-2">Дата</th>
+                          <th class="px-4 py-2">Статус</th>
+                          <th class="px-4 py-2">HTTP</th>
+                          <th class="px-4 py-2">DR</th>
+                          <th class="px-4 py-2">Токсичность</th>
+                        </tr>
+                      </thead>
+                      <tbody id="purchased-history-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div id="purchased-history-result" class="text-sm text-gray-700"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

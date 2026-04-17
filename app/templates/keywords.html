@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Ключевые слова</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-indigo-700 font-medium" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-end">
+            <div class="min-w-[250px]">
+              <label class="block text-sm font-medium text-gray-700">Сайт</label>
+              <select id="keywords-site-select"
+                class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border"></select>
+            </div>
+            <div class="min-w-[260px]">
+              <label class="block text-sm font-medium text-gray-700">Поиск</label>
+              <input id="keywords-q" type="text" placeholder="keyword / url"
+                class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border" />
+            </div>
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+              onclick="loadKeywords()">Обновить</button>
+          </div>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="text-sm text-gray-600">Вид графиков:</div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Линия/столбцы</label>
+              <select id="chart-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                <option value="line">Линия</option>
+                <option value="bar">Столбцы</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Сглаживание</label>
+              <input id="chart-smooth" type="checkbox" class="h-4 w-4" />
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Динамика позиций</h3>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="loadKeywordsHistory()">Обновить</button>
+            </div>
+            <div class="h-72">
+              <canvas id="keywords-history-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Cannibalization</h3>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="loadCannibalization()">Обновить</button>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Ключ</th>
+                    <th class="px-4 py-2">URL</th>
+                  </tr>
+                </thead>
+                <tbody id="cannibal-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 class="text-lg font-bold mb-4">Добавить ключ</h2>
+          <form class="grid grid-cols-1 md:grid-cols-5 gap-4"
+            onsubmit="event.preventDefault(); createKeywordFromForm();">
+            <input id="kw-keyword" type="text" required placeholder="Ключевое слово"
+              class="rounded-md border-gray-300 text-sm p-2 border" />
+            <button
+              class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+              type="button" onclick="loadKeywordSuggestions()">
+              Подсказки
+            </button>
+            <div class="flex items-center gap-2">
+              <input id="kw-suggest-expanded" type="checkbox" class="h-4 w-4" />
+              <label for="kw-suggest-expanded" class="text-sm text-gray-600">Расширенный</label>
+            </div>
+            <input id="kw-position" type="number" step="0.1" placeholder="Позиция"
+              class="rounded-md border-gray-300 text-sm p-2 border" />
+            <input id="kw-url" type="text" placeholder="URL" class="rounded-md border-gray-300 text-sm p-2 border" />
+            <div class="mt-4 flex items-center gap-3">
+              <input id="kw-csv" type="file" accept=".csv,text/csv" class="hidden" />
+              <button
+                class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="triggerKeywordImport()">
+                Импорт CSV
+              </button>
+              <div class="text-xs text-gray-500">Колонки: keyword, position, url, frequency</div>
+            </div>
+            <input id="kw-frequency" type="number" placeholder="Частота"
+              class="rounded-md border-gray-300 text-sm p-2 border" />
+            <button
+              class="bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-black transition text-sm">Добавить</button>
+            <div class="md:col-span-5">
+              <div id="kw-suggest-panel" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-4"></div>
+            </div>
+            <table class="w-full text-left">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-6 py-4">Ключ</th>
+                  <th class="px-6 py-4">Позиция</th>
+                  <th class="px-6 py-4">URL</th>
+                  <th class="px-6 py-4">Частота</th>
+                  <th class="px-6 py-4">Источник</th>
+                  <th class="px-6 py-4">Дата</th>
+                  <th class="px-6 py-4 text-right">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="keywords-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="7" class="px-6 py-10 text-center text-gray-400">Загрузка…</td>
+                </tr>
+              </tbody>
+            </table>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold">Последние изменения позиций</h3>
+            <button class="text-sm text-indigo-700 hover:underline" onclick="loadKeywordChanges()">Обновить</button>
+          </div>
+          <div class="overflow-x-auto border rounded-lg">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-4 py-2">Ключ</th>
+                  <th class="px-4 py-2">URL</th>
+                  <th class="px-4 py-2">Было</th>
+                  <th class="px-4 py-2">Стало</th>
+                  <th class="px-4 py-2">Δ</th>
+                  <th class="px-4 py-2">Дата</th>
+                </tr>
+              </thead>
+              <tbody id="kw-changes-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="6" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">SEO Panel</div>
+    </footer>
+  </div>
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

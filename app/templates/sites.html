@@ -1,111 +1,341 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SEO Panel — Sites</title>
+  <title>SEO Panel — Сайты</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body class="bg-gray-50 text-gray-900">
   <div class="min-h-screen flex flex-col">
     <header class="bg-white border-b">
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div class="font-bold text-lg">SEO Panel</div>
-        <nav class="flex gap-4 text-sm">
-          <a class="text-gray-600 hover:text-gray-900" href="/">Dashboard</a>
-          <a class="text-indigo-700 font-medium" href="/sites">Sites</a>
-          <a class="text-gray-600 hover:text-gray-900" href="/logout">Logout</a>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-indigo-700 font-medium" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/purchased-links">Купленные ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/users">Пользователи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
         </nav>
       </div>
     </header>
 
     <main class="flex-1">
       <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        <div
-          id="sites-loader"
-          hx-get="/api/sites"
-          hx-trigger="load"
-          hx-swap="none"
-          data-render="sites"
-        ></div>
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-3 items-end justify-between">
+            <div class="flex flex-wrap gap-3 items-end">
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">User-Agent</div>
+                <select id="ua-choice"
+                  class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">По умолчанию</option>
+                  <option value="googlebot">Googlebot</option>
+                  <option value="bingbot">Bingbot</option>
+                  <option value="yandexbot">YandexBot</option>
+                  <option value="custom">Свой</option>
+                </select>
+              </div>
+              <div class="min-w-[260px]">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Свой User-Agent</div>
+                <input id="ua-custom" type="text" placeholder="Введите User-Agent…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+              </div>
+            </div>
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+              onclick="runAllScans()">
+              Запустить полный аудит всех сайтов
+            </button>
+          </div>
+        </section>
+
+        <div id="sites-loader" hx-get="/api/sites/" hx-trigger="load" hx-swap="none" data-render="sites"></div>
 
         <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h2 class="text-lg font-bold mb-4">Add site</h2>
-          <form
-            id="site-create-form"
-            hx-ext="json-enc"
-            hx-post="/api/sites"
-            hx-swap="none"
-            data-render="siteCreated"
-            class="grid grid-cols-1 md:grid-cols-4 gap-4"
-          >
+          <h2 class="text-lg font-bold mb-4">Добавить сайт</h2>
+          <form id="site-create-form" hx-ext="json-enc" hx-post="/api/sites/" hx-swap="none" data-render="siteCreated"
+            class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700">Domain</label>
-              <input
-                type="text"
-                name="domain"
-                placeholder="example.com"
-                required
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
-              />
+              <label class="block text-sm font-medium text-gray-700">Домен</label>
+              <input type="text" name="domain" placeholder="example.com" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700">CMS</label>
-              <input
-                type="text"
-                name="cms"
-                placeholder="WordPress"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
-              />
+              <input type="text" name="cms" placeholder="WordPress"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Region</label>
-              <input
-                type="text"
-                name="region"
-                placeholder="RU / Global"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
-              />
+              <label class="block text-sm font-medium text-gray-700">Регион</label>
+              <input type="text" name="region" placeholder="RU / Global"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
             </div>
             <div class="flex items-end">
-              <button
-                type="submit"
-                class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition"
-              >
-                Add
+              <button type="submit"
+                class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
+                Добавить
               </button>
             </div>
           </form>
           <div id="site-create-error" class="mt-4 text-sm text-red-600"></div>
         </section>
 
+        <div id="site-alerts-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closeAlertsModal()"></div>
+          <div class="relative mx-auto mt-24 max-w-2xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div>
+                  <div class="text-lg font-bold">Email уведомления</div>
+                  <div id="alerts-result" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                <button class="text-sm text-gray-500 hover:underline" onclick="closeAlertsModal()">Закрыть</button>
+              </div>
+              <div class="p-6 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Email</label>
+                  <input id="alerts-email" type="email" placeholder="you@example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Включено</label>
+                  <select id="alerts-enabled" class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                    <option value="false">нет</option>
+                    <option value="true">да</option>
+                  </select>
+                </div>
+                <div class="pt-2 border-t">
+                  <div class="text-sm font-semibold text-gray-800">User-Agent для сканов</div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Режим</label>
+                      <select id="alerts-ua-choice"
+                        class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                        <option value="">по умолчанию</option>
+                        <option value="googlebot">Googlebot</option>
+                        <option value="bingbot">Bingbot</option>
+                        <option value="yandexbot">Yandexbot</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Custom UA</label>
+                      <input id="alerts-custom-ua" type="text" placeholder="Mozilla/5.0 ..."
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+                    </div>
+                  </div>
+                </div>
+                <div class="pt-2 border-t">
+                  <div class="text-sm font-semibold text-gray-800">Поведение сканирования</div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Приоритет</label>
+                      <select id="alerts-scan-priority"
+                        class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                        <option value="high">высокий</option>
+                        <option value="normal">обычный</option>
+                        <option value="low">низкий</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Пауза между шагами (мс)</label>
+                      <input id="alerts-scan-pause-ms" type="number" min="0" max="10000" step="100"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">robots.txt</label>
+                      <select id="alerts-respect-robots"
+                        class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                        <option value="true">использовать</option>
+                        <option value="false">игнорировать</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Sitemap</label>
+                      <select id="alerts-use-sitemap"
+                        class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                        <option value="true">использовать</option>
+                        <option value="false">игнорировать</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="pt-2 border-t">
+                  <div class="text-sm font-semibold text-gray-800">Ahrefs API</div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Включено</label>
+                      <select id="alerts-ahrefs-enabled"
+                        class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                        <option value="false">нет</option>
+                        <option value="true">да</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">API key (Bearer)</label>
+                      <input id="alerts-ahrefs-key" type="password" placeholder="AHREFS_API_KEY…"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+                      <div class="mt-1 text-xs text-gray-500">Ключ хранится в БД и используется для получения
+                        refdomains.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+                <button class="text-sm text-gray-600 hover:underline" onclick="closeAlertsModal()">Отмена</button>
+                <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                  onclick="saveSiteAlerts()">
+                  Сохранить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div class="px-6 py-4 flex items-center justify-between">
-            <h2 class="text-lg font-bold">Sites</h2>
-            <button
-              class="text-sm text-indigo-700 hover:underline"
-              onclick="window.location.reload()"
-            >
-              Refresh
+            <h2 class="text-lg font-bold">Сайты</h2>
+            <button class="text-sm text-indigo-700 hover:underline" onclick="window.location.reload()">
+              Обновить
             </button>
           </div>
           <table class="w-full text-left">
             <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
               <tr>
-                <th class="px-6 py-4">Domain</th>
+                <th class="px-6 py-4">Домен</th>
                 <th class="px-6 py-4">CMS</th>
-                <th class="px-6 py-4">Region</th>
-                <th class="px-6 py-4 text-right">Actions</th>
+                <th class="px-6 py-4">Регион</th>
+                <th class="px-6 py-4">Скан</th>
+                <th class="px-6 py-4 text-right">Действия</th>
               </tr>
             </thead>
             <tbody id="sites-body" class="divide-y divide-gray-100">
               <tr>
-                <td colspan="4" class="px-6 py-10 text-center text-gray-400">Loading…</td>
+                <td colspan="5" class="px-6 py-10 text-center text-gray-400">Загрузка…</td>
               </tr>
             </tbody>
           </table>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold">История сканов</h2>
+            <div class="flex items-center gap-4">
+              <div class="text-sm text-gray-500">Выбран: <span id="selected-site-label">—</span></div>
+              <div class="flex items-center gap-2">
+                <div class="text-xs font-semibold text-gray-500 uppercase">Вид</div>
+                <select id="sites-scan-view" class="rounded-md border-gray-300 text-sm p-2 border">
+                  <option value="large">крупно</option>
+                  <option value="compact">компактно</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="text-xs font-semibold text-gray-500 uppercase">График</div>
+                <select id="sites-chart-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                  <option value="line">линия</option>
+                  <option value="bar">столбцы</option>
+                </select>
+              </div>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="refreshHistory()">
+                Обновить историю
+              </button>
+              <button class="text-sm text-gray-500 hover:underline" onclick="clearSelectedScanHistory()">
+                Сбросить историю
+              </button>
+              <button class="text-sm text-red-600 hover:underline" onclick="cleanupScans()">
+                Очистить старые сканы
+              </button>
+            </div>
+          </div>
+          <div id="scan-history-panel" class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">robots.txt</div>
+                <div id="robots-result" class="text-sm text-gray-700">Нет данных</div>
+                <div class="mt-3">
+                  <div class="h-56" data-sites-chart-box="small">
+                    <canvas id="robots-status-chart" class="w-full h-full"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">sitemap</div>
+                <div id="sitemap-result" class="text-sm text-gray-700">Нет данных</div>
+                <div class="mt-3">
+                  <div class="h-56" data-sites-chart-box="small">
+                    <canvas id="sitemap-errors-chart" class="w-full h-full"></canvas>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">тех. аудит</div>
+                <div id="tech-audit-result" class="text-sm text-gray-700">Нет данных</div>
+                <div class="mt-3">
+                  <div class="h-56" data-sites-chart-box="small">
+                    <canvas id="tech-audit-status-chart" class="w-full h-full"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="scan-history-loader"></div>
+            <div class="grid grid-cols-1 gap-6">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Время ответа (мс)</h3>
+                <div class="h-72" data-sites-chart-box="big">
+                  <canvas id="scan-rt-chart" class="w-full h-full"></canvas>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Оценка здоровья (0..100)</h3>
+                <div class="h-72" data-sites-chart-box="big">
+                  <canvas id="scan-health-chart" class="w-full h-full"></canvas>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-gray-700 mb-2">Последние сканы</h3>
+              <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                    <tr>
+                      <th class="px-4 py-2">Дата</th>
+                      <th class="px-4 py-2">Статус</th>
+                      <th class="px-4 py-2">Время (мс)</th>
+                      <th class="px-4 py-2">Длина title</th>
+                      <th class="px-4 py-2">H1</th>
+                      <th class="px-4 py-2">В индексе</th>
+                      <th class="px-4 py-2">Оценка</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scan-history-table" class="divide-y divide-gray-100">
+                    <tr>
+                      <td colspan="7" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </main>
@@ -119,4 +349,5 @@
 
   <script src="/static/js/app.js"></script>
 </body>
+
 </html>

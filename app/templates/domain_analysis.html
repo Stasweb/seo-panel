@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Анализ домена</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/users">Пользователи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-bold">Анализ домена: <span id="da-domain">—</span></h2>
+            <button class="text-sm text-indigo-700 hover:underline" onclick="loadDomainAnalysis()">
+              Обновить
+            </button>
+          </div>
+          <div id="da-stats" class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div class="text-xs text-gray-500 uppercase">DR</div>
+              <div id="da-dr" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div class="text-xs text-gray-500 uppercase">Backlinks</div>
+              <div id="da-backlinks" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div class="text-xs text-gray-500 uppercase">Referring domains</div>
+              <div id="da-refdomains" class="text-2xl font-bold">—</div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div class="text-xs text-gray-500 uppercase">Страны (по TLD)</div>
+              <div id="da-regions" class="text-sm text-gray-700 mt-1">—</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="text-sm text-gray-600">Вид графиков:</div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Линия/столбцы</label>
+              <select id="chart-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                <option value="line">Линия</option>
+                <option value="bar">Столбцы</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Сглаживание</label>
+              <input id="chart-smooth" type="checkbox" class="h-4 w-4" />
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold">Internal linking (home)</h3>
+            <button class="text-sm text-indigo-700 hover:underline" onclick="loadInternalLinks()">Обновить</button>
+          </div>
+          <div id="il-summary" class="text-sm text-gray-600 mb-3">—</div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Страница</th>
+                    <th class="px-4 py-2">Ссылок</th>
+                  </tr>
+                </thead>
+                <tbody id="il-top-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div class="h-72">
+                <canvas id="il-depth-chart" class="w-full h-full"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold">Top anchors</h3>
+          </div>
+          <div class="overflow-x-auto border rounded-lg">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-4 py-2">Anchor</th>
+                  <th class="px-4 py-2">Кол-во</th>
+                </tr>
+              </thead>
+              <tbody id="da-anchors-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="2" class="px-4 py-6 text-center text-gray-400">Загрузка…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">
+        SEO Panel
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

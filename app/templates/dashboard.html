@@ -4,7 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SEO Panel — Dashboard</title>
+  <title>SEO Panel — Дашборд</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
@@ -17,85 +18,353 @@
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div class="font-bold text-lg">SEO Panel</div>
         <nav class="flex gap-4 text-sm">
-          <a class="text-indigo-700 font-medium" href="/">Dashboard</a>
-          <a class="text-gray-600 hover:text-gray-900" href="/sites">Sites</a>
-          <a class="text-gray-600 hover:text-gray-900" href="/logout">Logout</a>
+          <a class="text-indigo-700 font-medium" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/purchased-links">Купленные ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/users">Пользователи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/tasks">Задачи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/content-plans">Контент</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
         </nav>
       </div>
     </header>
 
     <main class="flex-1">
       <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        <div id="dashboard-loader" hx-get="/api/dashboard" hx-trigger="load" hx-swap="none" data-render="dashboard">
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+          <div class="flex flex-col gap-3">
+            <div class="text-sm text-gray-600">
+              Глобальные проверки запускаются в фоне и сохраняют историю в БД.
+            </div>
+            <div class="flex flex-wrap gap-3 items-end">
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">User-Agent</div>
+                <select id="ua-choice"
+                  class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">По умолчанию</option>
+                  <option value="googlebot">Googlebot</option>
+                  <option value="bingbot">Bingbot</option>
+                  <option value="yandexbot">YandexBot</option>
+                  <option value="custom">Свой</option>
+                </select>
+              </div>
+              <div class="min-w-[260px]">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Свой User-Agent</div>
+                <input id="ua-custom" type="text" placeholder="Введите User-Agent…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+              </div>
+            </div>
+          </div>
+          <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+            onclick="runAllScans()">
+            Запустить полный аудит всех сайтов
+          </button>
+        </section>
+
+        <div id="dashboard-loader" hx-get="/api/dashboard" hx-trigger="load, every 30s" hx-swap="none"
+          data-render="dashboard">
         </div>
 
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="text-sm text-gray-600">Вид графиков:</div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Линия/столбцы</label>
+              <select id="chart-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                <option value="line">Линия</option>
+                <option value="bar">Столбцы</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Сглаживание</label>
+              <input id="chart-smooth" type="checkbox" class="h-4 w-4" />
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Кольцо/столбцы</label>
+              <select id="chart-donut-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                <option value="doughnut">Кольцо</option>
+                <option value="bar">Столбцы</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <button
+            class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow"
+            onclick="openDashboardSummary('sites')">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-500 uppercase">Sites</span>
+              <span class="text-sm font-medium text-gray-500 uppercase">Сайты</span>
               <span class="p-2 bg-blue-100 rounded-lg text-blue-600">🌐</span>
             </div>
             <div id="stat-sites" class="text-2xl font-bold">—</div>
-          </div>
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="mt-2 text-xs text-gray-500">Открыть список</div>
+          </button>
+          <button
+            class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow"
+            onclick="openDashboardSummary('tasks_todo')">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-500 uppercase">Tasks todo</span>
+              <span class="text-sm font-medium text-gray-500 uppercase">Задачи (в ожидании)</span>
               <span class="p-2 bg-yellow-100 rounded-lg text-yellow-600">📝</span>
             </div>
             <div id="stat-todo" class="text-2xl font-bold">—</div>
-          </div>
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="mt-2 text-xs text-gray-500">Открыть список</div>
+          </button>
+          <button
+            class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow"
+            onclick="openDashboardSummary('tasks_in_progress')">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-500 uppercase">In progress</span>
+              <span class="text-sm font-medium text-gray-500 uppercase">В работе</span>
               <span class="p-2 bg-green-100 rounded-lg text-green-600">⚙️</span>
             </div>
             <div id="stat-inprogress" class="text-2xl font-bold">—</div>
-          </div>
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="mt-2 text-xs text-gray-500">Открыть список</div>
+          </button>
+          <button
+            class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow"
+            onclick="openDashboardSummary('content_ideas')">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-500 uppercase">Content ideas</span>
+              <span class="text-sm font-medium text-gray-500 uppercase">Идеи контента</span>
               <span class="p-2 bg-purple-100 rounded-lg text-purple-600">💡</span>
             </div>
             <div id="stat-ideas" class="text-2xl font-bold">—</div>
-          </div>
+            <div class="mt-2 text-xs text-gray-500">Открыть список</div>
+          </button>
         </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <div class="text-sm font-medium text-gray-500 uppercase">Инфраструктура</div>
+              <div class="text-xs text-gray-500">Клик по блокам открывает детали</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button id="ip-widget"
+                class="text-left p-4 rounded-lg border bg-gray-50 hover:border-indigo-200 hover:bg-white transition"
+                onclick="openIpDetails()">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs font-semibold text-gray-500 uppercase">IP адреса</div>
+                  <div class="text-gray-700">🧭</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-500">Локальный IP</div>
+                  <div id="ip-local" class="font-semibold break-all">—</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-500">Внешний IP</div>
+                  <div id="ip-external" class="font-semibold break-all">—</div>
+                </div>
+                <div id="ip-changed" class="mt-2 text-xs text-gray-500">—</div>
+              </button>
+
+              <button
+                class="text-left p-4 rounded-lg border bg-gray-50 hover:border-indigo-200 hover:bg-white transition"
+                onclick="openSystemDetails()">
+                <div class="flex items-center justify-between">
+                  <div class="text-xs font-semibold text-gray-500 uppercase">Сервис</div>
+                  <div class="text-gray-700">🧩</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-500">Аптайм</div>
+                  <div id="sys-uptime" class="font-semibold">—</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-500">База данных</div>
+                  <div id="sys-db" class="font-semibold break-all">—</div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-xs text-gray-500">Python / ОС</div>
+                  <div id="sys-runtime" class="font-semibold break-all">—</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <button
+            class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-left hover:border-indigo-200 hover:shadow"
+            onclick="openSystemDetails()">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-500 uppercase">База данных</span>
+              <span class="p-2 bg-gray-100 rounded-lg text-gray-700">🗄️</span>
+            </div>
+            <div class="text-sm text-gray-500">Размер</div>
+            <div id="sys-db-size" class="text-2xl font-bold">—</div>
+            <div class="mt-2 text-xs text-gray-500">Открыть детали</div>
+          </button>
+        </section>
+
+        <div id="dashboard-summary-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closeDashboardSummary()"></div>
+          <div class="relative mx-auto mt-24 max-w-3xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div>
+                  <div id="dashboard-summary-title" class="text-lg font-bold">—</div>
+                  <div id="dashboard-summary-subtitle" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                <button class="text-sm text-gray-500 hover:underline" onclick="closeDashboardSummary()">Закрыть</button>
+              </div>
+              <div class="p-6">
+                <div id="dashboard-summary-body" class="space-y-2 text-sm text-gray-700"></div>
+              </div>
+              <div class="px-6 py-4 border-t flex items-center justify-between">
+                <a id="dashboard-summary-link" class="text-sm text-indigo-700 hover:underline" href="#">Открыть
+                  страницу</a>
+                <button class="text-sm text-gray-600 hover:underline" onclick="closeDashboardSummary()">Ок</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="ip-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closeIpDetails()"></div>
+          <div class="relative mx-auto mt-24 max-w-4xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div>
+                  <div class="text-lg font-bold">IP адреса сервера</div>
+                  <div id="ip-modal-subtitle" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                <button class="text-sm text-gray-500 hover:underline" onclick="closeIpDetails()">Закрыть</button>
+              </div>
+              <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Локальный IP</div>
+                    <button id="ip-modal-local"
+                      class="text-left font-semibold text-indigo-700 hover:underline break-all"
+                      onclick="copyIp('local')">—</button>
+                    <div id="ip-modal-local-meta" class="text-xs text-gray-500 mt-2"></div>
+                  </div>
+                  <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Внешний IP</div>
+                    <button id="ip-modal-external"
+                      class="text-left font-semibold text-indigo-700 hover:underline break-all"
+                      onclick="copyIp('external')">—</button>
+                    <div id="ip-modal-external-meta" class="text-xs text-gray-500 mt-2"></div>
+                  </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-gray-200">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="text-xs font-semibold text-gray-500 uppercase">История изменений</div>
+                    <button class="text-sm text-indigo-700 hover:underline" onclick="loadIpHistory()">Обновить</button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                      <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                        <tr>
+                          <th class="px-4 py-2">Дата</th>
+                          <th class="px-4 py-2">Локальный IP</th>
+                          <th class="px-4 py-2">Внешний IP</th>
+                          <th class="px-4 py-2">Детали</th>
+                        </tr>
+                      </thead>
+                      <tbody id="ip-history-body" class="divide-y divide-gray-100">
+                        <tr>
+                          <td colspan="4" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div id="ip-modal-detail" class="text-sm text-gray-700"></div>
+              </div>
+              <div class="px-6 py-4 border-t flex items-center justify-between">
+                <div id="ip-copy-result" class="text-xs text-gray-500"></div>
+                <button class="text-sm text-gray-600 hover:underline" onclick="closeIpDetails()">Ок</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="system-modal" class="fixed inset-0 z-50 hidden">
+          <div class="absolute inset-0 bg-black/50" onclick="closeSystemDetails()"></div>
+          <div class="relative mx-auto mt-24 max-w-4xl px-4">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between border-b">
+                <div>
+                  <div class="text-lg font-bold">Детали сервера</div>
+                  <div id="system-modal-subtitle" class="text-sm text-gray-600 mt-1"></div>
+                </div>
+                <button class="text-sm text-gray-500 hover:underline" onclick="closeSystemDetails()">Закрыть</button>
+              </div>
+              <div class="p-6 space-y-4">
+                <div id="system-modal-body" class="text-sm text-gray-700"></div>
+              </div>
+              <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+                <button class="text-sm text-gray-600 hover:underline" onclick="closeSystemDetails()">Ок</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold">Positions history</h3>
-              <a class="text-sm text-gray-500 hover:underline" href="/sites">Manage sites</a>
+              <h3 class="text-lg font-bold">История позиций</h3>
+              <a class="text-sm text-gray-500 hover:underline" href="/sites">Управление сайтами</a>
             </div>
-            <div hx-get="/api/dashboard/positions-history" hx-trigger="load" hx-swap="none"
+            <div hx-get="/api/dashboard/positions-history" hx-trigger="load, every 30s" hx-swap="none"
               data-render="positionsChart"></div>
-            <canvas id="positions-chart" height="120"></canvas>
+            <div class="h-72">
+              <canvas id="positions-chart" class="w-full h-full"></canvas>
+            </div>
           </div>
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-bold">Tasks stats</h3>
-              <a class="text-sm text-gray-500 hover:underline" href="/sites">Manage tasks</a>
+              <h3 class="text-lg font-bold">Статистика задач</h3>
+              <a class="text-sm text-gray-500 hover:underline" href="/sites">Управление задачами</a>
             </div>
-            <div hx-get="/api/dashboard/tasks-stats" hx-trigger="load" hx-swap="none" data-render="tasksChart"></div>
-            <canvas id="tasks-chart" height="120"></canvas>
+            <div hx-get="/api/dashboard/tasks-stats" hx-trigger="load, every 30s" hx-swap="none"
+              data-render="tasksChart"></div>
+            <div class="h-72">
+              <canvas id="tasks-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold">Состояние проверок (robots/sitemap)</h3>
+            <a class="text-sm text-gray-500 hover:underline" href="/sites">Перейти к сайтам</a>
+          </div>
+          <div hx-get="/api/dashboard/errors-stats" hx-trigger="load, every 30s" hx-swap="none"
+            data-render="errorsChart"></div>
+          <div class="h-64">
+            <canvas id="errors-chart" class="w-full h-full"></canvas>
           </div>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold mb-4">Recent position changes</h3>
+            <h3 class="text-lg font-bold mb-4">Последние изменения позиций</h3>
             <div class="overflow-x-auto">
               <table class="w-full text-left">
                 <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
                   <tr>
-                    <th class="px-4 py-3">Keyword</th>
-                    <th class="px-4 py-3">Position</th>
-                    <th class="px-4 py-3">Date</th>
-                    <th class="px-4 py-3">Source</th>
+                    <th class="px-4 py-3">Ключевое слово</th>
+                    <th class="px-4 py-3">Позиция</th>
+                    <th class="px-4 py-3">Дата</th>
+                    <th class="px-4 py-3">Источник</th>
                   </tr>
                 </thead>
                 <tbody id="positions-body" class="text-sm divide-y divide-gray-100">
                   <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-400">Loading…</td>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-400">Загрузка…</td>
                   </tr>
                 </tbody>
               </table>
@@ -104,7 +373,7 @@
 
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-8">
             <div>
-              <h3 class="text-lg font-bold mb-4">Quick SEO audit</h3>
+              <h3 class="text-lg font-bold mb-4">Быстрая SEO-проверка</h3>
               <form hx-ext="json-enc" hx-post="/api/seo/audit" hx-swap="none" data-render="audit" class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700">URL</label>
@@ -112,56 +381,165 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
                     required />
                 </div>
+                <input type="hidden" name="ua" id="audit-ua" value="" />
+                <input type="hidden" name="custom_ua" id="audit-custom-ua" value="" />
                 <button type="submit"
                   class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
-                  Check URL
+                  Проверить URL
                 </button>
               </form>
               <div id="audit-result" class="mt-4 text-sm text-gray-700"></div>
             </div>
 
             <div>
-              <h3 class="text-lg font-bold mb-4">AI meta generator</h3>
+              <h3 class="text-lg font-bold mb-4">Углублённая SEO-проверка</h3>
+              <form hx-ext="json-enc" hx-post="/api/seo/deep-audit" hx-swap="none" data-render="deepAudit"
+                class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">URL</label>
+                  <input type="text" name="url" placeholder="https://example.com"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
+                    required />
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-2">
+                    <input id="deep-suggest-expanded" type="checkbox" class="h-4 w-4" checked />
+                    <label for="deep-suggest-expanded" class="text-sm text-gray-600">Собирать подсказки
+                      (expanded)</label>
+                  </div>
+                  <input type="hidden" name="suggest_mode" id="deep-suggest-mode" value="expanded" />
+                  <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600">Вариантов</label>
+                    <input type="number" name="suggest_variants" value="15" min="5" max="30"
+                      class="w-24 rounded-md border-gray-300 text-sm p-2 border" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Целевой ключ (для антиспама)</label>
+                  <input type="text" name="target_keyword" placeholder="например: купить кондиционер"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+                </div>
+                <input type="hidden" name="ua" id="deep-audit-ua" value="" />
+                <input type="hidden" name="custom_ua" id="deep-audit-custom-ua" value="" />
+                <button type="submit" class="w-full bg-gray-900 text-white p-2 rounded-md hover:bg-black transition">
+                  Запустить углублённую проверку
+                </button>
+              </form>
+              <div id="deep-audit-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">AI (локально, если доступно)</h3>
+                <button class="text-sm text-gray-500 hover:underline" onclick="loadAiSettings()">Обновить</button>
+              </div>
+              <div class="space-y-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Провайдер</label>
+                    <select id="ai-provider" class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                      <option value="auto">auto</option>
+                      <option value="ollama">ollama</option>
+                      <option value="off">off</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Модель</label>
+                    <select id="ai-model" class="mt-1 block w-full rounded-md border-gray-300 text-sm p-2 border">
+                      <option value="">(загрузка...)</option>
+                    </select>
+                  </div>
+                </div>
+                <button class="w-full bg-gray-900 text-white p-2 rounded-md hover:bg-black transition"
+                  onclick="saveAiSettings()">
+                  Сохранить настройки AI
+                </button>
+                <div id="ai-status" class="text-xs text-gray-500"></div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-bold mb-4">Генератор meta description</h3>
               <form hx-ext="json-enc" hx-post="/api/ai/meta" hx-swap="none" data-render="meta" class="space-y-4">
-                <textarea name="content" rows="4" placeholder="Paste content…"
+                <textarea name="content" rows="4" placeholder="Вставьте текст…"
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
                   required></textarea>
                 <button type="submit"
                   class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
-                  Generate
+                  Сгенерировать
                 </button>
               </form>
               <div id="meta-result" class="mt-4 text-sm text-gray-700"></div>
             </div>
 
             <div>
-              <h3 class="text-lg font-bold mb-4">AI keyword suggestions</h3>
+              <h3 class="text-lg font-bold mb-4">Подсказки ключевых слов</h3>
               <form hx-ext="json-enc" hx-post="/api/ai/keywords" hx-swap="none" data-render="aiKeywords"
                 class="space-y-4">
-                <textarea name="text" rows="4" placeholder="Paste text…"
+                <textarea name="text" rows="4" placeholder="Вставьте текст…"
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
                   required></textarea>
                 <button type="submit"
                   class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
-                  Suggest
+                  Показать
                 </button>
               </form>
               <div id="ai-keywords-result" class="mt-4 text-sm text-gray-700"></div>
             </div>
 
             <div>
-              <h3 class="text-lg font-bold mb-4">Title optimizer</h3>
+              <h3 class="text-lg font-bold mb-4">Оптимизация Title</h3>
               <form hx-ext="json-enc" hx-post="/api/ai/title-check" hx-swap="none" data-render="titleCheck"
                 class="space-y-4">
-                <input type="text" name="title" placeholder="Enter Title…"
+                <input type="text" name="title" placeholder="Введите Title…"
                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border"
                   required />
                 <button type="submit"
                   class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition">
-                  Check
+                  Проверить
                 </button>
               </form>
               <div id="title-check-result" class="mt-4 text-sm text-gray-700"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Топ изменений ключей</h3>
+              <div class="flex items-center gap-3">
+                <select id="dashboard-site-filter" class="rounded-md border-gray-300 text-sm p-2 border"></select>
+                <a class="text-sm text-gray-500 hover:underline" href="/keywords">Ключевые слова</a>
+              </div>
+            </div>
+            <div id="dashboard-deltas-loader"></div>
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Ключ</th>
+                    <th class="px-4 py-2">Было</th>
+                    <th class="px-4 py-2">Стало</th>
+                    <th class="px-4 py-2">Δ</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-deltas-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">Загрузка…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Последние ошибки</h3>
+              <a class="text-sm text-gray-500 hover:underline" href="/logs">Логи</a>
+            </div>
+            <div id="dashboard-errors-loader"></div>
+            <div class="space-y-2" id="dashboard-errors-list">
+              <div class="text-sm text-gray-400">Загрузка…</div>
             </div>
           </div>
         </section>

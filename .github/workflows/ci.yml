@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Tests
+        env:
+          SECRET_KEY: test
+          ADMIN_PASSWORD_HASH: "$2b$12$C4nY/5pPFzN2OkpX6hpg3O3Wl4QfVfG3y4aH0O0g2jFh2W2oK7wQG"
+          DATABASE_URL: "sqlite+aiosqlite:///./test_ci.db"
+          TESTING: "true"
+        run: |
+          python -m unittest discover -s tests -p "test_*.py" -q
+

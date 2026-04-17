@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Конкуренты</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/links">Ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-indigo-700 font-medium" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 class="text-lg font-bold mb-4">Анализ конкурента</h2>
+          <div class="flex flex-wrap gap-3 items-end">
+            <div class="min-w-[320px]">
+              <label class="block text-sm font-medium text-gray-700">Домен</label>
+              <input id="competitor-domain" type="text" placeholder="example.com"
+                class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border" />
+            </div>
+            <div class="min-w-[260px]">
+              <label class="block text-sm font-medium text-gray-700">Ваш сайт (для сравнения доноров)</label>
+              <select id="competitor-site" class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border"></select>
+            </div>
+            <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+              onclick="analyzeCompetitor()">
+              Анализировать
+            </button>
+            <button
+              class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+              onclick="loadCompetitorBacklinks()">
+              Обновить ссылки
+            </button>
+            <button
+              class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+              onclick="saveCompetitor()">
+              Сохранить конкурента
+            </button>
+          </div>
+          <div id="competitor-result" class="mt-4 text-sm text-gray-600"></div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold">Сохранённые конкуренты</h3>
+            <button
+              class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+              onclick="loadSavedCompetitors()">
+              Обновить список
+            </button>
+          </div>
+          <div id="saved-competitors-result" class="mt-3 text-sm text-gray-600"></div>
+          <div class="overflow-x-auto border rounded-lg mt-4">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-4 py-2">Домен</th>
+                  <th class="px-4 py-2">Сайт</th>
+                  <th class="px-4 py-2">Последняя проверка</th>
+                  <th class="px-4 py-2">Доноры</th>
+                  <th class="px-4 py-2">Ссылки</th>
+                  <th class="px-4 py-2">DR</th>
+                  <th class="px-4 py-2 text-right">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="saved-competitors-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="7" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-6 bg-white p-4 rounded-lg border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-xs font-semibold text-gray-500 uppercase">История метрик</div>
+              <button
+                class="bg-white border border-gray-300 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="loadCompetitorHistory()">
+                Обновить историю
+              </button>
+            </div>
+            <div id="competitor-history-result" class="text-sm text-gray-600"></div>
+            <div class="overflow-x-auto border rounded-lg mt-3">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Дата</th>
+                    <th class="px-4 py-2">HTTP</th>
+                    <th class="px-4 py-2">Доноры</th>
+                    <th class="px-4 py-2">Ссылки</th>
+                    <th class="px-4 py-2">Dofollow, %</th>
+                    <th class="px-4 py-2">DR</th>
+                    <th class="px-4 py-2">Разрыв</th>
+                    <th class="px-4 py-2">Пересечение</th>
+                  </tr>
+                </thead>
+                <tbody id="competitor-history-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="8" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-end justify-between">
+            <div>
+              <h3 class="text-lg font-bold">Ссылочный профиль</h3>
+              <div class="text-sm text-gray-600 mt-1">Доноры, анкоры, условный DR и сравнение с вашим сайтом</div>
+            </div>
+            <div class="flex flex-wrap gap-3 items-end">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Импорт CSV</label>
+                <input id="competitor-links-file" type="file" accept=".csv,text/csv" class="mt-1 block text-sm" />
+              </div>
+              <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="importCompetitorBacklinks()">
+                Импортировать
+              </button>
+              <button
+                class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="clearCompetitorBacklinks()">
+                Очистить
+              </button>
+            </div>
+          </div>
+          <div id="competitor-links-result" class="mt-4 text-sm text-gray-600"></div>
+          <div id="competitor-links-dashboard" class="mt-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Ссылок всего</div>
+                <div id="comp-total" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Доноров</div>
+                <div id="comp-donors" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Доля dofollow, %</div>
+                <div id="comp-dofollow" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Средний DR</div>
+                <div id="comp-avgdr" class="text-2xl font-bold">—</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Распределение DR</div>
+                <div id="comp-dr-buckets" class="text-sm text-gray-700">Нет данных</div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Типы ссылок</div>
+                <div id="comp-link-types" class="text-sm text-gray-700">Нет данных</div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Регионы доноров</div>
+                <div id="comp-regions" class="text-sm text-gray-700">Нет данных</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Топ доноров</div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                      <tr>
+                        <th class="px-4 py-2">Донор</th>
+                        <th class="px-4 py-2">Ссылок</th>
+                        <th class="px-4 py-2">DR</th>
+                        <th class="px-4 py-2">Анкоров</th>
+                      </tr>
+                    </thead>
+                    <tbody id="comp-donors-body" class="divide-y divide-gray-100">
+                      <tr>
+                        <td colspan="4" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Топ анкоров</div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                      <tr>
+                        <th class="px-4 py-2">Анкор</th>
+                        <th class="px-4 py-2">Сколько</th>
+                        <th class="px-4 py-2">%</th>
+                      </tr>
+                    </thead>
+                    <tbody id="comp-anchors-body" class="divide-y divide-gray-100">
+                      <tr>
+                        <td colspan="3" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Топ страниц по ссылкам</div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                      <tr>
+                        <th class="px-4 py-2">URL</th>
+                        <th class="px-4 py-2">Ссылок</th>
+                      </tr>
+                    </thead>
+                    <tbody id="comp-targets-body" class="divide-y divide-gray-100">
+                      <tr>
+                        <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Пересечение доноров</div>
+                <div id="comp-overlap" class="text-sm text-gray-700">Нет данных</div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="text-xs font-semibold text-gray-500 uppercase">Разрыв доноров (donor gap)</div>
+                  <div class="flex gap-2">
+                    <button
+                      class="bg-white border border-gray-300 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-50 transition text-sm"
+                      onclick="exportCompetitorGap()">
+                      Экспорт
+                    </button>
+                    <button class="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition text-sm"
+                      onclick="createTasksFromCompetitorGap()">
+                      Создать задачи
+                    </button>
+                  </div>
+                </div>
+                <div id="comp-gap" class="text-sm text-gray-700">Нет данных</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h3 class="text-lg font-bold mb-4">Отчёт</h3>
+          <div id="competitor-report" class="space-y-4 text-sm text-gray-700">
+            Нет данных
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div id="donor-modal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/50" onclick="closeDonorModal()"></div>
+      <div class="relative mx-auto mt-16 max-w-5xl px-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div class="px-6 py-4 flex items-center justify-between border-b">
+            <div>
+              <div class="text-lg font-bold">Карточка донора</div>
+              <div id="donor-modal-subtitle" class="text-sm text-gray-600 mt-1"></div>
+            </div>
+            <button class="text-sm text-gray-500 hover:underline" onclick="closeDonorModal()">Закрыть</button>
+          </div>
+          <div class="p-6 space-y-6">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+              <div class="space-y-1">
+                <div class="text-xs font-semibold text-gray-400 uppercase">Донор</div>
+                <div id="donor-modal-domain" class="font-medium break-all">—</div>
+              </div>
+              <div class="flex gap-2 items-center">
+                <button id="donor-modal-export"
+                  class="bg-white border border-gray-300 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-50 transition text-sm"
+                  onclick="exportDonorLinks()">
+                  Экспорт ссылок
+                </button>
+                <button id="donor-modal-task"
+                  class="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition text-sm"
+                  onclick="createTaskFromDonor()">
+                  Создать задачу
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Ссылок</div>
+                <div id="donor-modal-total" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Средний DR</div>
+                <div id="donor-modal-avgdr" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Доля dofollow, %</div>
+                <div id="donor-modal-dofollow" class="text-2xl font-bold">—</div>
+              </div>
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Уник. анкоров</div>
+                <div id="donor-modal-uanchors" class="text-2xl font-bold">—</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Топ анкоров</div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                      <tr>
+                        <th class="px-4 py-2">Анкор</th>
+                        <th class="px-4 py-2">Сколько</th>
+                      </tr>
+                    </thead>
+                    <tbody id="donor-modal-anchors" class="divide-y divide-gray-100">
+                      <tr>
+                        <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Топ страниц-получателей</div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                      <tr>
+                        <th class="px-4 py-2">URL</th>
+                        <th class="px-4 py-2">Ссылок</th>
+                      </tr>
+                    </thead>
+                    <tbody id="donor-modal-targets" class="divide-y divide-gray-100">
+                      <tr>
+                        <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+              <div class="text-xs font-semibold text-gray-500 uppercase mb-3">Ссылки (source → target)</div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                    <tr>
+                      <th class="px-4 py-2">Источник</th>
+                      <th class="px-4 py-2">Цель</th>
+                      <th class="px-4 py-2">Анкор</th>
+                      <th class="px-4 py-2">Тип</th>
+                      <th class="px-4 py-2">DR</th>
+                    </tr>
+                  </thead>
+                  <tbody id="donor-modal-links" class="divide-y divide-gray-100">
+                    <tr>
+                      <td colspan="5" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+            <button class="text-sm text-gray-600 hover:underline" onclick="closeDonorModal()">Ок</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">SEO Panel</div>
+    </footer>
+  </div>
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

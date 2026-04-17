@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Задачи</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <a class="text-gray-600 hover:text-gray-900 text-sm" href="/logout">Выйти</a>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <aside class="lg:col-span-3">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Работа</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-indigo-700 font-medium hover:underline" href="/tasks">Задачи</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/content-plans">Контент</a>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Проекты</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-gray-700 hover:underline" href="/">Дашборд</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/sites">Сайты</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/links">Ссылки</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/keywords">Ключевые слова</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/competitors">Конкуренты</a>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Сопутствующее</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-gray-700 hover:underline" href="/users">Пользователи</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/notes">Заметки</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/logs">Логи</a>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="lg:col-span-9 space-y-6">
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Быстрый фильтр</div>
+                  <button id="tasks-auto-filter"
+                    class="bg-white border border-gray-300 text-gray-800 px-3 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                    onclick="toggleAutoTasksFilter()">
+                    Авто-задачи: выкл
+                  </button>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Статус</div>
+                  <select id="tasks-status" class="rounded-md border-gray-300 text-sm p-2 border">
+                    <option value="">все</option>
+                    <option value="todo">в ожидании</option>
+                    <option value="in_progress">в работе</option>
+                    <option value="done">готово</option>
+                  </select>
+                </div>
+                <div class="min-w-[240px]">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Сайт</div>
+                  <select id="tasks-site" class="rounded-md border-gray-300 text-sm p-2 border w-full"></select>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Приоритет</div>
+                  <select id="tasks-priority" class="rounded-md border-gray-300 text-sm p-2 border">
+                    <option value="">все</option>
+                    <option value="high">высокий</option>
+                    <option value="normal">обычный</option>
+                    <option value="low">низкий</option>
+                  </select>
+                </div>
+                <div class="min-w-[240px]">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Поиск</div>
+                  <input id="tasks-q" type="text" placeholder="title/description…"
+                    class="rounded-md border-gray-300 text-sm p-2 border w-full" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Сортировка</div>
+                  <select id="tasks-sort" class="rounded-md border-gray-300 text-sm p-2 border">
+                    <option value="created_desc">сначала новые</option>
+                    <option value="created_asc">сначала старые</option>
+                    <option value="priority_desc">сначала high</option>
+                  </select>
+                </div>
+                <div class="flex items-end">
+                  <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                    onclick="loadTasksPage()">
+                    Обновить
+                  </button>
+                </div>
+                <div id="tasks-result" class="text-sm text-gray-600 flex-1"></div>
+              </div>
+            </section>
+
+            <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between">
+                <h2 class="text-lg font-bold">Задачи</h2>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                    <tr>
+                      <th class="px-6 py-4">Сайт</th>
+                      <th class="px-6 py-4">Задача</th>
+                      <th class="px-6 py-4">Источник</th>
+                      <th class="px-6 py-4">Приоритет</th>
+                      <th class="px-6 py-4">Статус</th>
+                      <th class="px-6 py-4">Создано</th>
+                      <th class="px-6 py-4 text-right">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tasks-body" class="divide-y divide-gray-100">
+                    <tr>
+                      <td colspan="7" class="px-6 py-10 text-center text-gray-400">Загрузка…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="task-modal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/50" onclick="closeTaskModal()"></div>
+      <div class="relative mx-auto mt-16 max-w-4xl px-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div class="px-6 py-4 flex items-center justify-between border-b">
+            <div>
+              <div class="text-lg font-bold">Карточка задачи</div>
+              <div id="task-modal-subtitle" class="text-sm text-gray-600 mt-1"></div>
+            </div>
+            <button class="text-sm text-gray-500 hover:underline" onclick="closeTaskModal()">Закрыть</button>
+          </div>
+          <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-1">Заголовок</div>
+                <div id="task-modal-title" class="font-medium break-all">—</div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-1">Сайт</div>
+                <div id="task-modal-site" class="text-sm text-gray-700">—</div>
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase mb-1">Описание</div>
+              <div id="task-modal-desc" class="text-sm text-gray-700 whitespace-pre-wrap break-words">—</div>
+            </div>
+            <div class="flex flex-wrap gap-3 items-center">
+              <a id="task-modal-url" class="text-sm text-indigo-700 hover:underline" href="#" target="_blank"
+                rel="noreferrer">Открыть URL</a>
+              <button id="task-modal-open-audit" class="text-sm text-indigo-700 hover:underline" onclick="openTaskAudit()">
+                Открыть последний SEO-отчёт
+              </button>
+              <div id="task-modal-badges" class="flex gap-2"></div>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Последний SEO-отчёт</div>
+              <div id="task-modal-audit" class="text-sm text-gray-700"></div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t flex items-center justify-end gap-3">
+            <button class="text-sm text-gray-600 hover:underline" onclick="closeTaskModal()">Ок</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">
+        SEO Panel
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

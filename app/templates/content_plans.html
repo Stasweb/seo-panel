@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Идеи контента</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <a class="text-gray-600 hover:text-gray-900 text-sm" href="/logout">Выйти</a>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <aside class="lg:col-span-3">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Работа</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-gray-700 hover:underline" href="/tasks">Задачи</a>
+                  <a class="block text-sm text-indigo-700 font-medium hover:underline" href="/content-plans">Контент</a>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Проекты</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-gray-700 hover:underline" href="/">Дашборд</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/sites">Сайты</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/links">Ссылки</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/keywords">Ключевые слова</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/competitors">Конкуренты</a>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Сопутствующее</div>
+                <div class="space-y-1">
+                  <a class="block text-sm text-gray-700 hover:underline" href="/users">Пользователи</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/notes">Заметки</a>
+                  <a class="block text-sm text-gray-700 hover:underline" href="/logs">Логи</a>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="lg:col-span-9 space-y-6">
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Статус</div>
+                  <select id="content-status" class="rounded-md border-gray-300 text-sm p-2 border">
+                    <option value="idea">идеи</option>
+                    <option value="writing">в работе</option>
+                    <option value="published">опубликовано</option>
+                    <option value="">все</option>
+                  </select>
+                </div>
+                <div class="min-w-[240px]">
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Сайт</div>
+                  <select id="content-site" class="rounded-md border-gray-300 text-sm p-2 border w-full"></select>
+                </div>
+                <div class="flex items-end">
+                  <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                    onclick="loadContentPlansPage()">
+                    Обновить
+                  </button>
+                </div>
+                <div id="content-result" class="text-sm text-gray-600 flex-1"></div>
+              </div>
+            </section>
+
+            <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Добавить идею</h2>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-1">
+                  <label class="block text-sm font-medium text-gray-700">Сайт</label>
+                  <select id="content-create-site"
+                    class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border"></select>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700">Заголовок</label>
+                  <input id="content-create-title" type="text"
+                    class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border" />
+                </div>
+                <div class="md:col-span-1">
+                  <label class="block text-sm font-medium text-gray-700">URL (опц.)</label>
+                  <input id="content-create-url" type="text"
+                    class="mt-1 w-full rounded-md border-gray-300 text-sm p-2 border" />
+                </div>
+                <div class="md:col-span-4">
+                  <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                    onclick="createContentIdea()">
+                    Добавить
+                  </button>
+                  <div id="content-create-result" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div class="px-6 py-4 flex items-center justify-between">
+                <h2 class="text-lg font-bold">Контент</h2>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                  <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                    <tr>
+                      <th class="px-6 py-4">Сайт</th>
+                      <th class="px-6 py-4">Идея</th>
+                      <th class="px-6 py-4">Статус</th>
+                      <th class="px-6 py-4">Создано</th>
+                    </tr>
+                  </thead>
+                  <tbody id="content-body" class="divide-y divide-gray-100">
+                    <tr>
+                      <td colspan="4" class="px-6 py-10 text-center text-gray-400">Загрузка…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">
+        SEO Panel
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

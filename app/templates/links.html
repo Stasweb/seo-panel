@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Panel — Ссылки</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold text-lg">SEO Panel</div>
+        <nav class="flex gap-4 text-sm items-center">
+          <a class="text-gray-600 hover:text-gray-900" href="/">Дашборд</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/sites">Сайты</a>
+          <a class="text-indigo-700 font-medium" href="/links">Ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/purchased-links">Купленные ссылки</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/users">Пользователи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/keywords">Ключевые слова</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/competitors">Конкуренты</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/logs">Логи</a>
+          <a class="text-gray-600 hover:text-gray-900" href="/notes">Заметки</a>
+          <button id="notif-btn" class="text-gray-700 hover:text-gray-900 text-sm"
+            onclick="toggleNotifications()">🔔<span id="notif-count"
+              class="ml-1 text-xs text-white bg-rose-600 rounded px-1 hidden">0</span></button>
+          <div id="notif-menu"
+            class="hidden absolute right-6 top-14 w-96 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+            <div class="px-4 py-2 text-xs uppercase text-gray-400 bg-gray-50">События</div>
+            <div id="notif-items" class="max-h-80 overflow-y-auto"></div>
+          </div>
+          <a class="text-gray-600 hover:text-gray-900" href="/logout">Выйти</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-3 items-end justify-between">
+            <div class="flex flex-wrap gap-3 items-end">
+              <div class="min-w-[260px]">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Сайт</div>
+                <select id="links-site-select"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">Загрузка…</option>
+                </select>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Фильтр</div>
+                <select id="links-compare-filter"
+                  class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">Все</option>
+                  <option value="OK">OK</option>
+                  <option value="NEW">NEW</option>
+                  <option value="LOST">LOST</option>
+                </select>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Тип</div>
+                <select id="links-type-filter"
+                  class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">Любой</option>
+                  <option value="dofollow">dofollow</option>
+                  <option value="nofollow">nofollow</option>
+                </select>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Toxic</div>
+                <select id="links-toxic-filter"
+                  class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border">
+                  <option value="">Любой</option>
+                  <option value="safe">safe</option>
+                  <option value="suspicious">suspicious</option>
+                  <option value="toxic">toxic</option>
+                </select>
+              </div>
+              <div class="min-w-[260px]">
+                <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Поиск</div>
+                <input id="links-q" type="text" placeholder="donor / target / anchor…"
+                  class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2 border" />
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="refreshLinks()">
+                Обновить ссылки
+              </button>
+              <button
+                class="bg-white border border-indigo-300 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-50 transition text-sm"
+                onclick="refreshLinksAhrefs()">
+                Обновить из Ahrefs
+              </button>
+              <button class="bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-black transition text-sm"
+                onclick="analyzeLinks()">
+                Запустить анализ
+              </button>
+              <button
+                class="bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="openLinksImportModal()">
+                Импорт
+              </button>
+            </div>
+          </div>
+          <div id="links-action-result" class="mt-3 text-sm text-gray-600"></div>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex flex-wrap gap-4 items-center">
+            <div class="text-sm text-gray-600">Вид графиков:</div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Линия/столбцы</label>
+              <select id="chart-type" class="rounded-md border-gray-300 text-sm p-2 border">
+                <option value="line">Линия</option>
+                <option value="bar">Столбцы</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-gray-500 uppercase">Сглаживание</label>
+              <input id="chart-smooth" type="checkbox" class="h-4 w-4" />
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Рост ссылок</h3>
+              <div id="links-totals" class="text-sm text-gray-500">—</div>
+            </div>
+            <div class="h-72">
+              <canvas id="links-growth-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Новые / Потерянные</h3>
+              <div class="text-sm text-gray-500">последние 30 дней</div>
+            </div>
+            <div class="h-72">
+              <canvas id="links-newlost-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">DR динамика (среднее)</h3>
+              <div class="text-sm text-gray-500">после анализа · <span id="links-last-analyzed">—</span></div>
+            </div>
+            <div class="h-72">
+              <canvas id="links-dr-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Toxic %</h3>
+              <div class="text-sm text-gray-500">после анализа</div>
+            </div>
+            <div class="h-72">
+              <canvas id="links-toxic-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Анкор-лист</h3>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="loadAnchorAnalysis()">Обновить</button>
+            </div>
+            <div class="h-80">
+              <canvas id="links-anchors-chart" class="w-full h-full"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Топ анкоры</h3>
+              <div class="text-sm text-gray-500" id="anchors-total">—</div>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Anchor</th>
+                    <th class="px-4 py-2">Кол-во</th>
+                    <th class="px-4 py-2">%</th>
+                  </tr>
+                </thead>
+                <tbody id="anchors-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="3" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Top pages (по backlinks)</h3>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="loadTopPages()">Обновить</button>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">URL</th>
+                    <th class="px-4 py-2">Backlinks</th>
+                  </tr>
+                </thead>
+                <tbody id="top-pages-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="2" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-bold">Broken links</h3>
+              <button class="text-sm text-indigo-700 hover:underline" onclick="loadBrokenLinks()">Обновить</button>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2">Donor URL</th>
+                    <th class="px-4 py-2">HTTP</th>
+                    <th class="px-4 py-2">Проверка</th>
+                  </tr>
+                </thead>
+                <tbody id="broken-links-body" class="divide-y divide-gray-100">
+                  <tr>
+                    <td colspan="3" class="px-4 py-6 text-center text-gray-400">Нет данных</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="px-6 py-4 flex items-center justify-between">
+            <h2 class="text-lg font-bold">Ссылки</h2>
+            <button class="text-sm text-indigo-700 hover:underline" onclick="reloadLinks()">
+              Обновить список
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left">
+              <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-400">
+                <tr>
+                  <th class="px-6 py-4">Target URL</th>
+                  <th class="px-6 py-4">Донор</th>
+                  <th class="px-6 py-4">Anchor</th>
+                  <th class="px-6 py-4">Тип</th>
+                  <th class="px-6 py-4">Статус</th>
+                  <th class="px-6 py-4">DR</th>
+                  <th class="px-6 py-4">Toxic</th>
+                  <th class="px-6 py-4">Источник</th>
+                  <th class="px-6 py-4">Дата</th>
+                  <th class="px-6 py-4">Проверка</th>
+                </tr>
+              </thead>
+              <tbody id="links-body" class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="10" class="px-6 py-10 text-center text-gray-400">Выберите сайт</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="bg-white border-t">
+      <div class="max-w-6xl mx-auto px-6 py-4 text-center text-gray-500 text-sm">
+        SEO Panel
+      </div>
+    </footer>
+
+    <div id="links-import-modal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/50" onclick="closeLinksImportModal()"></div>
+      <div class="relative mx-auto mt-16 max-w-4xl px-4">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div class="px-6 py-4 flex items-center justify-between border-b">
+            <div>
+              <div class="text-lg font-bold">Импорт ссылок</div>
+              <div class="text-sm text-gray-600 mt-1">Выберите способ загрузки ссылок</div>
+            </div>
+            <button class="text-sm text-gray-500 hover:underline" onclick="closeLinksImportModal()">Закрыть</button>
+          </div>
+
+          <div class="p-6 space-y-6">
+            <div class="flex flex-wrap gap-2">
+              <button id="links-import-tab-csv"
+                class="bg-indigo-600 text-white px-3 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="setLinksImportTab('csv')">CSV</button>
+              <button id="links-import-tab-text"
+                class="bg-white border border-gray-300 text-gray-800 px-3 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="setLinksImportTab('text')">Текст</button>
+              <button id="links-import-tab-manual"
+                class="bg-white border border-gray-300 text-gray-800 px-3 py-2 rounded-md hover:bg-gray-50 transition text-sm"
+                onclick="setLinksImportTab('manual')">Вручную</button>
+            </div>
+
+            <div id="links-import-pane-csv" class="space-y-4">
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700">
+                <div class="font-medium">Как подготовить CSV</div>
+                <div class="mt-2">
+                  Обязательные колонки: <span class="font-mono">source_url</span>, <span
+                    class="font-mono">target_url</span>.
+                </div>
+                <div class="mt-1">
+                  Опционально: <span class="font-mono">anchor</span>, <span class="font-mono">type</span>/<span
+                    class="font-mono">link_type</span> (dofollow/nofollow),
+                  <span class="font-mono">dr</span>/<span class="font-mono">domain_score</span> (число).
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                  Пример строки: https://donor.com/page, https://your-site.com/, "купить", dofollow, 55
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <input id="backlinks-csv" type="file" accept=".csv,text/csv" class="block text-sm" />
+                <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                  onclick="importLinksCsvFromModal()">
+                  Импортировать CSV
+                </button>
+              </div>
+            </div>
+
+            <div id="links-import-pane-text" class="space-y-4 hidden">
+              <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700">
+                <div class="font-medium">Формат текста</div>
+                <div class="mt-2">Каждая строка: <span class="font-mono">source_url, target_url, anchor, type, dr</span>
+                </div>
+                <div class="mt-1 text-xs text-gray-500">Разделитель: запятая или таб или пробел. anchor/type/dr можно не
+                  указывать.</div>
+              </div>
+              <textarea id="backlinks-text" rows="10" class="w-full rounded-md border-gray-300 text-sm p-2 border"
+                placeholder="https://donor.com/page, https://your-site.com/, купить, dofollow, 55"></textarea>
+              <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="importLinksText()">
+                Импортировать текст
+              </button>
+            </div>
+
+            <div id="links-import-pane-manual" class="space-y-4 hidden">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Источник (source_url)</div>
+                  <input id="backlink-manual-source" type="text"
+                    class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="https://donor.com/page" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Цель (target_url)</div>
+                  <input id="backlink-manual-target" type="text"
+                    class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="https://your-site.com/" />
+                </div>
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Анкор (опционально)</div>
+                  <input id="backlink-manual-anchor" type="text"
+                    class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="купить" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Тип</div>
+                    <select id="backlink-manual-type" class="w-full rounded-md border-gray-300 text-sm p-2 border">
+                      <option value="dofollow">dofollow</option>
+                      <option value="nofollow">nofollow</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-1">DR (опц.)</div>
+                    <input id="backlink-manual-dr" type="number" min="0" max="100"
+                      class="w-full rounded-md border-gray-300 text-sm p-2 border" placeholder="55" />
+                  </div>
+                </div>
+              </div>
+              <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition text-sm"
+                onclick="addLinkManual()">
+                Добавить ссылку
+              </button>
+            </div>
+
+            <div id="links-import-result" class="text-sm text-gray-700"></div>
+
+            <div class="pt-4 border-t">
+              <div class="text-xs font-semibold text-gray-400 uppercase mb-2">Опасные действия</div>
+              <div class="flex flex-wrap gap-3 items-center">
+                <button class="text-xs text-gray-500 hover:text-rose-700 underline" onclick="clearLinks('import')">
+                  Удалить импортированные ссылки
+                </button>
+                <button class="text-xs text-gray-500 hover:text-rose-700 underline" onclick="clearLinks('all')">
+                  Удалить все ссылки сайта
+                </button>
+              </div>
+              <div class="mt-2 text-xs text-gray-500">
+                Для удаления потребуется подтверждение.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>
