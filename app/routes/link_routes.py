@@ -173,6 +173,62 @@ async def ahrefs_history(site_id: int = Query(...), limit: int = Query(default=2
     }
 
 
+@router.get("/quality-history")
+async def links_quality_history(site_id: int = Query(...), limit: int = Query(default=200), db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+    site = await db.get(Site, site_id)
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    limit = max(1, min(500, int(limit)))
+    rows = (
+        await db.execute(
+            select(MetricHistory)
+            .where(MetricHistory.site_id == site_id, MetricHistory.metric_type == "links_quality")
+            .order_by(MetricHistory.created_at.asc())
+            .limit(limit)
+        )
+    ).scalars().all()
+
+    if not rows:
+        total = int(
+            (
+                await db.execute(select(func.count(Backlink.id)).where(Backlink.site_id == site_id))
+            ).scalar()
+            or 0
+        )
+        toxic_cnt = int(
+            (
+                await db.execute(
+                    select(func.count(Backlink.id)).where(
+                        Backlink.site_id == site_id, Backlink.toxic_flag.in_(("toxic", "suspicious"))
+                    )
+                )
+            ).scalar()
+            or 0
+        )
+        dr_values = (
+            await db.execute(select(Backlink.domain_score).where(Backlink.site_id == site_id, Backlink.domain_score.is_not(None)))
+        ).all()
+        dr_nums = [int(v) for (v,) in dr_values if v is not None]
+        avg_dr = int(round(sum(dr_nums) / max(1, len(dr_nums)))) if dr_nums else 0
+        toxic_pct = round((toxic_cnt / max(1, total)) * 100.0, 2) if total else 0.0
+        ts = utcnow().isoformat()
+        return {
+            "site_id": site_id,
+            "items": [{"created_at": ts, "value": {"avg_dr": avg_dr, "toxic_pct": toxic_pct, "total": total}}],
+            "labels": [ts],
+            "avg_dr": [avg_dr],
+            "toxic_pct": [toxic_pct],
+        }
+
+    return {
+        "site_id": site_id,
+        "items": [{"created_at": r.created_at.isoformat(), "value": r.value_json} for r in rows],
+        "labels": [r.created_at.isoformat() for r in rows],
+        "avg_dr": [int((r.value_json or {}).get("avg_dr") or 0) for r in rows],
+        "toxic_pct": [float((r.value_json or {}).get("toxic_pct") or 0) for r in rows],
+    }
+
+
 @router.get("/top-pages")
 async def top_pages(site_id: int = Query(...), limit: int = Query(default=20), db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     site = await db.get(Site, site_id)
@@ -550,6 +606,36 @@ async def analyze_links(
         async with AsyncSessionLocal() as job_db:
             try:
                 await link_analysis_service.analyze_site(job_db, site_id=site_id, limit=limit)
+                total = int(
+                    (
+                        await job_db.execute(select(func.count(Backlink.id)).where(Backlink.site_id == site_id))
+                    ).scalar()
+                    or 0
+                )
+                toxic_cnt = int(
+                    (
+                        await job_db.execute(
+                            select(func.count(Backlink.id)).where(
+                                Backlink.site_id == site_id, Backlink.toxic_flag.in_(("toxic", "suspicious"))
+                            )
+                        )
+                    ).scalar()
+                    or 0
+                )
+                dr_values = (
+                    await job_db.execute(select(Backlink.domain_score).where(Backlink.site_id == site_id, Backlink.domain_score.is_not(None)))
+                ).all()
+                dr_nums = [int(v) for (v,) in dr_values if v is not None]
+                avg_dr = int(round(sum(dr_nums) / max(1, len(dr_nums)))) if dr_nums else 0
+                toxic_pct = round((toxic_cnt / max(1, total)) * 100.0, 2) if total else 0.0
+                job_db.add(
+                    MetricHistory(
+                        site_id=site_id,
+                        metric_type="links_quality",
+                        value={"avg_dr": avg_dr, "toxic_pct": toxic_pct, "total": total},
+                        created_at=utcnow(),
+                    )
+                )
                 t = await job_db.get(Task, task.id)
                 if t:
                     t.status = "done"
@@ -595,12 +681,17 @@ async def last_analyzed(site_id: int = Query(...), db: AsyncSession = Depends(ge
     site = await db.get(Site, site_id)
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
-    row = (await db.execute(
-        select(MetricHistory)
-        .where(MetricHistory.site_id == site_id, MetricHistory.metric_type == "links_ahrefs")
-        .order_by(MetricHistory.created_at.desc())
-        .limit(1)
-    )).scalars().first()
+    row = (
+        await db.execute(
+            select(MetricHistory)
+            .where(
+                MetricHistory.site_id == site_id,
+                MetricHistory.metric_type.in_(("links_quality", "links_ahrefs")),
+            )
+            .order_by(MetricHistory.created_at.desc())
+            .limit(1)
+        )
+    ).scalars().first()
     if not row:
         return {"site_id": site_id, "last_analyzed_at": None, "value": None}
     return {"site_id": site_id, "last_analyzed_at": row.created_at.isoformat() if row.created_at else None, "value": row.value_json}

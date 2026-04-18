@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -27,6 +28,29 @@ class PurchasedLinkCreatePayload(BaseModel):
     anchor: Optional[str] = None
     link_type: Optional[str] = None
     domain_score: Optional[int] = None
+
+
+@router.post("/migrate-from-links")
+async def migrate_from_links(
+    site_id: int = Query(...),
+    confirm: str = Query(default=""),
+    days: int = Query(default=30),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    if (confirm or "").strip().upper() != "DELETE":
+        raise HTTPException(status_code=400, detail="Confirm required")
+    site = await db.get(Site, int(site_id))
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    days = max(1, min(3650, int(days)))
+    cutoff = utcnow() - timedelta(days=days)
+    res = await db.execute(
+        update(Backlink)
+        .where(Backlink.site_id == int(site_id), Backlink.source == "manual", Backlink.first_seen >= cutoff)
+        .values(source="purchased")
+    )
+    await db.commit()
+    return {"ok": True, "site_id": int(site_id), "updated": int(getattr(res, "rowcount", 0) or 0)}
 
 
 @router.get("")
@@ -201,4 +225,3 @@ async def monitor_purchased_links(
         return {"ok": True, "scheduled": False, "task_id": int(task.id)}
     background.add_task(_job)
     return {"ok": True, "scheduled": True, "task_id": int(task.id)}
-

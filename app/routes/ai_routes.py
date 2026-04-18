@@ -12,6 +12,8 @@ from app.core.database import get_db
 from app.services.ai_config_service import ai_config_service
 from app.services.ollama_client import ollama_client
 from app.services.ai_runtime_service import ai_runtime_service
+from app.models.models import AppLog
+from app.utils.time import utcnow
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -59,6 +61,18 @@ async def ai_meta(payload: MetaRequest, db: AsyncSession = Depends(get_db)) -> D
         out = await ai_service.generate_meta_ai(payload.content, max_length=payload.max_length, model=resolved["effective_model"])
         if out is not None:
             return out
+        db.add(
+            AppLog(
+                level="WARNING",
+                category="ai",
+                method="POST",
+                path="/api/ai/meta",
+                status_code=None,
+                message=f"ollama meta failed, fallback used (model={resolved['effective_model']})",
+                created_at=utcnow(),
+            )
+        )
+        await db.commit()
     return ai_service.generate_meta(payload.content, max_length=payload.max_length)
 
 
@@ -72,6 +86,18 @@ async def ai_keywords(payload: DensityRequest, db: AsyncSession = Depends(get_db
         out = await ai_service.keyword_suggestions_ai(payload.text, limit=10, model=resolved["effective_model"])
         if out is not None:
             return out
+        db.add(
+            AppLog(
+                level="WARNING",
+                category="ai",
+                method="POST",
+                path="/api/ai/keywords",
+                status_code=None,
+                message=f"ollama keywords failed, fallback used (model={resolved['effective_model']})",
+                created_at=utcnow(),
+            )
+        )
+        await db.commit()
     return ai_service.keyword_suggestions(payload.text, limit=10)
 
 
@@ -85,4 +111,16 @@ async def ai_title_check(payload: TitleRequest, db: AsyncSession = Depends(get_d
         out = await ai_service.title_check_ai(payload.title, model=resolved["effective_model"])
         if out is not None:
             return out
+        db.add(
+            AppLog(
+                level="WARNING",
+                category="ai",
+                method="POST",
+                path="/api/ai/title-check",
+                status_code=None,
+                message=f"ollama title-check failed, fallback used (model={resolved['effective_model']})",
+                created_at=utcnow(),
+            )
+        )
+        await db.commit()
     return ai_service.title_check(payload.title)

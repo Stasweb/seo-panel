@@ -73,7 +73,7 @@ class LinkService:
         if link_type not in ("dofollow", "nofollow"):
             link_type = "dofollow"
         source = (source or "manual").strip().lower()
-        if source not in ("gsc", "yandex", "manual", "import"):
+        if source not in ("gsc", "yandex", "manual", "import", "purchased", "ahrefs"):
             source = "manual"
 
         row = (await db.execute(

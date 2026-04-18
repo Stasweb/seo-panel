@@ -1750,7 +1750,7 @@ function rerenderChartsFromCache() {
   if (_chartCache.tasks && document.getElementById("tasks-chart")) renderTasksChart(_chartCache.tasks);
   if (_chartCache.errors && document.getElementById("errors-chart")) renderErrorsChart(_chartCache.errors);
   if (_chartCache.linksStats && document.getElementById("links-growth-chart")) renderLinksCharts(_chartCache.linksStats);
-  if (_chartCache.ahrefs && document.getElementById("links-dr-chart")) renderAhrefsCharts(_chartCache.ahrefs);
+  if (_chartCache.linksQuality && document.getElementById("links-dr-chart")) renderLinksQualityCharts(_chartCache.linksQuality);
   if (_chartCache.anchor && document.getElementById("links-anchors-chart")) renderAnchorAnalysis(_chartCache.anchor);
   if (_chartCache.kwHistory && document.getElementById("keywords-history-chart")) renderKeywordsHistoryChart(_chartCache.kwHistory);
   if (_chartCache.internalLinks && document.getElementById("il-depth-chart")) renderInternalLinks(_chartCache.internalLinks);
@@ -2579,7 +2579,7 @@ async function reloadLinks() {
   const items = await _fetchJson(`/api/links?${params.toString()}`);
   renderLinksTable(items);
   await loadLinksStats();
-  await loadAhrefsHistory();
+  await loadLinksQualityHistory();
   await loadAnchorAnalysis();
   await loadTopPages();
   await loadBrokenLinks();
@@ -2725,15 +2725,15 @@ function renderLinksCharts(payload) {
   }
 }
 
-async function loadAhrefsHistory() {
+async function loadLinksQualityHistory() {
   const siteId = _selectedLinksSiteId();
   if (!siteId) return;
-  const payload = await _fetchJson(`/api/links/ahrefs-history?site_id=${encodeURIComponent(String(siteId))}&limit=200`);
-  renderAhrefsCharts(payload);
+  const payload = await _fetchJson(`/api/links/quality-history?site_id=${encodeURIComponent(String(siteId))}&limit=200`);
+  renderLinksQualityCharts(payload);
 }
 
-function renderAhrefsCharts(payload) {
-  _chartCache.ahrefs = payload;
+function renderLinksQualityCharts(payload) {
+  _chartCache.linksQuality = payload;
   const labels = Array.isArray(payload?.labels) ? payload.labels : [];
   const dr = Array.isArray(payload?.avg_dr) ? payload.avg_dr : [];
   const tox = Array.isArray(payload?.toxic_pct) ? payload.toxic_pct : [];
@@ -2748,7 +2748,7 @@ function renderAhrefsCharts(payload) {
     } else {
       linksDrChartInstance = new Chart(drCanvas, {
         type: prefs.type,
-        data: { labels, datasets: [_seriesDataset("AVG DR", dr, "#6366f1")] },
+        data: { labels, datasets: [_seriesDataset("DR", dr, "#6366f1")] },
         options: _chartOptions({ reverseY: false, beginAtZero: true, yMin: 0, yMax: 100 }),
       });
     }
@@ -2896,7 +2896,7 @@ async function refreshLinksAhrefs() {
     });
     if (el) el.textContent = `Обновление из Ahrefs запущено (task #${r?.task_id ?? "?"}).`;
     if (r?.task_id) pollTaskStatus(Number(r.task_id), "Обновление из Ahrefs", "links-action-result");
-    await loadAhrefsHistory();
+    await loadLinksQualityHistory();
   } catch (e) {
     if (el) el.textContent = String(e?.message ?? e);
   }
@@ -3236,6 +3236,28 @@ async function monitorPurchasedLinksNow(silent) {
     setTimeout(() => reloadPurchasedLinks(), 1200);
   } catch (e) {
     if (!silent && resEl) resEl.textContent = String(e?.message ?? e);
+  }
+}
+
+async function migratePurchasedFromLinks() {
+  const siteId = _selectedPurchasedSiteId();
+  const resEl = document.getElementById("purchased-action-result");
+  if (!siteId) {
+    if (resEl) resEl.textContent = "Сначала выберите сайт.";
+    return;
+  }
+  const ok = window.prompt("Перенести ссылки из раздела «Ссылки» в «Купленные»? Введите DELETE:", "");
+  if (ok !== "DELETE") return;
+  try {
+    if (resEl) resEl.textContent = "Переношу…";
+    const payload = await _fetchJson(
+      `/api/purchased-links/migrate-from-links?site_id=${encodeURIComponent(String(siteId))}&days=3650&confirm=DELETE`,
+      { method: "POST" }
+    );
+    if (resEl) resEl.textContent = `Перенесено: ${payload?.updated ?? 0}`;
+    await reloadPurchasedLinks();
+  } catch (e) {
+    if (resEl) resEl.textContent = String(e?.message ?? e);
   }
 }
 
@@ -4038,6 +4060,32 @@ async function createKeywordFromForm() {
   }
 }
 
+async function refreshKeywordPositions() {
+  const siteEl = document.getElementById("keywords-site-select");
+  const resEl = document.getElementById("kw-positions-result");
+  const siteId = Number(siteEl?.value || "");
+  if (!siteId) {
+    if (resEl) resEl.textContent = "Выберите сайт.";
+    return;
+  }
+  try {
+    if (resEl) resEl.textContent = "Запускаю сбор позиций…";
+    const r = await _fetchJson(`/api/keywords/refresh-positions?site_id=${encodeURIComponent(String(siteId))}&limit=50`, {
+      method: "POST",
+    });
+    if (resEl) resEl.textContent = `Сбор запущен (task #${r?.task_id ?? "?"}).`;
+    if (r?.task_id) pollTaskStatus(Number(r.task_id), "Сбор позиций", "kw-positions-result");
+    setTimeout(() => {
+      loadKeywords();
+      loadKeywordsHistory();
+      loadCannibalization();
+      loadKeywordChanges();
+    }, 1500);
+  } catch (e) {
+    if (resEl) resEl.textContent = String(e?.message ?? e);
+  }
+}
+
 async function loadKeywordSuggestions() {
   const kwEl = document.getElementById("kw-keyword");
   const panel = document.getElementById("kw-suggest-panel");
@@ -4324,6 +4372,59 @@ async function initLogsPage() {
   const body = document.getElementById("logs-body");
   if (!body) return;
   await loadLogs();
+  loadAiLogsWidget();
+  _resetAiLogsTimer();
+}
+
+let _aiLogsTimer = null;
+function _resetAiLogsTimer() {
+  const widget = document.getElementById("ai-logs-widget");
+  if (!widget) return;
+  if (_aiLogsTimer) clearInterval(_aiLogsTimer);
+  _aiLogsTimer = setInterval(() => loadAiLogsWidget(true), 10000);
+}
+
+async function loadAiLogsWidget(silent) {
+  const statusEl = document.getElementById("ai-logs-status");
+  const errorsEl = document.getElementById("ai-logs-errors");
+  if (!statusEl || !errorsEl) return;
+  try {
+    if (!silent) statusEl.textContent = "Проверяю…";
+    const cfg = await _fetchJson("/api/ai/config");
+    const eff = `effective: ${(cfg?.effective_provider || "off").toString()} / ${(cfg?.effective_model || "—").toString()}`;
+    const oll = cfg?.ollama || {};
+    const ok = !!oll?.available;
+    const models = Array.isArray(oll?.models) ? oll.models : [];
+    statusEl.textContent = `${eff} · ollama: ${ok ? "OK" : "OFF"} (${models.length} моделей)`;
+  } catch (e) {
+    statusEl.textContent = `AI: ошибка загрузки конфигурации (${String(e?.message ?? e)})`;
+  }
+
+  try {
+    const payload = await _fetchJson("/api/logs?category=ai&hours=24&limit=50");
+    const items = Array.isArray(payload) ? payload : [];
+    const relevant = items.filter((x) => ["ERROR", "WARNING"].includes(String(x?.level || ""))).slice(0, 10);
+    if (!relevant.length) {
+      errorsEl.innerHTML = '<div class="text-gray-500">Ошибок нет</div>';
+      return;
+    }
+    errorsEl.innerHTML = relevant
+      .map((r) => {
+        const ts = (r.created_at ?? "").toString().slice(0, 19).replace("T", " ");
+        const lvl = String(r.level ?? "");
+        const badge = lvl === "ERROR" ? _badge("ERROR", "bg-rose-100 text-rose-700") : _badge("WARNING", "bg-amber-100 text-amber-700");
+        return `<div class="py-1 border-b border-gray-100">
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-xs text-gray-500">${escapeHtml(ts || "—")}</div>
+            <div>${badge}</div>
+          </div>
+          <div class="break-all">${escapeHtml(String(r.message ?? ""))}</div>
+        </div>`;
+      })
+      .join("");
+  } catch (e) {
+    errorsEl.textContent = `Ошибка загрузки логов AI: ${String(e?.message ?? e)}`;
+  }
 }
 
 function showLastErrors1h() {
@@ -5218,6 +5319,7 @@ window.openPurchasedAddModal = openPurchasedAddModal;
 window.closePurchasedAddModal = closePurchasedAddModal;
 window.submitPurchasedAdd = submitPurchasedAdd;
 window.monitorPurchasedLinksNow = monitorPurchasedLinksNow;
+window.migratePurchasedFromLinks = migratePurchasedFromLinks;
 window.togglePurchasedAuto = togglePurchasedAuto;
 window.openPurchasedHistory = openPurchasedHistory;
 window.closePurchasedHistory = closePurchasedHistory;
@@ -5227,6 +5329,7 @@ window.loadBrokenLinks = loadBrokenLinks;
 window.loadIntegrations = loadIntegrations;
 window.loadAiSettings = loadAiSettings;
 window.saveAiSettings = saveAiSettings;
+window.loadAiLogsWidget = loadAiLogsWidget;
 window.loadUsers = loadUsers;
 window.createUserFromForm = createUserFromForm;
 window.saveUser = saveUser;
@@ -5247,6 +5350,7 @@ window.createNoteFromForm = createNoteFromForm;
 window.deleteNote = deleteNote;
 window.loadKeywords = loadKeywords;
 window.createKeywordFromForm = createKeywordFromForm;
+window.refreshKeywordPositions = refreshKeywordPositions;
 window.loadKeywordSuggestions = loadKeywordSuggestions;
 window.setKeywordFromSuggestion = setKeywordFromSuggestion;
 window.loadInlineKeywordSuggestions = loadInlineKeywordSuggestions;

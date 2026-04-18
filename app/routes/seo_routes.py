@@ -16,8 +16,12 @@ import json
 from urllib.parse import urlparse
 from pydantic import BaseModel
 from fastapi import HTTPException
+import logging
+from app.models.models import AppLog
+from app.utils.time import utcnow
 
 router = APIRouter(prefix="/seo", tags=["seo"])
+logger = logging.getLogger(__name__)
 
 @router.post("/density")
 async def keyword_density(payload: DensityRequest) -> Dict[str, Any]:
@@ -50,15 +54,42 @@ async def audit_url(payload: AuditRequest, db: AsyncSession = Depends(get_db)):
     resolved = await ai_runtime_service.resolve(db)
     if resolved.get("effective_provider") == "ollama" and resolved.get("effective_model"):
         audit_dict = result.model_dump() if hasattr(result, "model_dump") else result.dict()
-        explained = await ai_service.explain_audit_ai(audit=audit_dict, model=str(resolved["effective_model"]))
-        if explained is not None:
-            return AuditResult(
-                **audit_dict,
-                ai_used=True,
-                ai_model=str(resolved["effective_model"]),
-                ai_summary=str(explained.get("summary") or ""),
-                ai_actions=list(explained.get("actions") or []),
+        try:
+            explained = await ai_service.explain_audit_ai(audit=audit_dict, model=str(resolved["effective_model"]))
+            if explained is not None:
+                return AuditResult(
+                    **audit_dict,
+                    ai_used=True,
+                    ai_model=str(resolved["effective_model"]),
+                    ai_summary=str(explained.get("summary") or ""),
+                    ai_actions=list(explained.get("actions") or []),
+                )
+            db.add(
+                AppLog(
+                    level="WARNING",
+                    category="ai",
+                    method="POST",
+                    path="/api/seo/audit",
+                    status_code=None,
+                    message=f"ollama explain_audit returned no result (model={resolved['effective_model']})",
+                    created_at=utcnow(),
+                )
             )
+            await db.commit()
+        except Exception as e:
+            logger.exception(f"AI explain_audit failed: {e}")
+            db.add(
+                AppLog(
+                    level="ERROR",
+                    category="ai",
+                    method="POST",
+                    path="/api/seo/audit",
+                    status_code=None,
+                    message=f"AI explain_audit failed: {e}",
+                    created_at=utcnow(),
+                )
+            )
+            await db.commit()
     return result
 
 
@@ -74,12 +105,40 @@ async def deep_audit_url(payload: DeepAuditRequest, request: Request, db: AsyncS
     )
     resolved = await ai_runtime_service.resolve(db)
     if resolved.get("effective_provider") == "ollama" and resolved.get("effective_model"):
-        explained = await ai_service.explain_deep_audit_ai(audit=result, model=str(resolved["effective_model"]))
-        if explained is not None:
-            result["ai_used"] = True
-            result["ai_model"] = str(resolved["effective_model"])
-            result["ai_summary"] = str(explained.get("summary") or "")
-            result["ai_actions"] = list(explained.get("actions") or [])
+        try:
+            explained = await ai_service.explain_deep_audit_ai(audit=result, model=str(resolved["effective_model"]))
+            if explained is not None:
+                result["ai_used"] = True
+                result["ai_model"] = str(resolved["effective_model"])
+                result["ai_summary"] = str(explained.get("summary") or "")
+                result["ai_actions"] = list(explained.get("actions") or [])
+            else:
+                db.add(
+                    AppLog(
+                        level="WARNING",
+                        category="ai",
+                        method="POST",
+                        path="/api/seo/deep-audit",
+                        status_code=None,
+                        message=f"ollama explain_deep_audit returned no result (model={resolved['effective_model']})",
+                        created_at=utcnow(),
+                    )
+                )
+                await db.commit()
+        except Exception as e:
+            logger.exception(f"AI explain_deep_audit failed: {e}")
+            db.add(
+                AppLog(
+                    level="ERROR",
+                    category="ai",
+                    method="POST",
+                    path="/api/seo/deep-audit",
+                    status_code=None,
+                    message=f"AI explain_deep_audit failed: {e}",
+                    created_at=utcnow(),
+                )
+            )
+            await db.commit()
 
     org_id = getattr(request.state, "organization_id", None)
     if not org_id:

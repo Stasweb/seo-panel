@@ -6,15 +6,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import csv
 import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.models import KeywordMetrics, Site
+from app.core.config import settings
+from app.models.models import KeywordMetrics, Site, Task, AppLog
 from app.utils.time import utcnow
 from app.services.keyword_suggest_service import keyword_suggest_service
+from app.services.position_check_service import position_check_service
+from app.core.database import AsyncSessionLocal
 
 
 router = APIRouter(prefix="/keywords", tags=["keywords"])
@@ -82,7 +85,7 @@ async def list_keywords(
 
 
 @router.post("")
-async def create_keyword(payload: KeywordCreateRequest, db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
+async def create_keyword(payload: KeywordCreateRequest, background: BackgroundTasks, db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     site = await db.get(Site, payload.site_id)
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
@@ -102,7 +105,138 @@ async def create_keyword(payload: KeywordCreateRequest, db: AsyncSession = Depen
     db.add(row)
     await db.commit()
     await db.refresh(row)
+    if payload.position is None and not payload.url:
+        site_id = int(payload.site_id)
+        keyword = kw
+        domain = site.domain
+
+        async def _job():
+            async with AsyncSessionLocal() as job_db:
+                try:
+                    pos, url = await position_check_service.check_ddg(keyword=keyword, domain=domain, limit=50)
+                    job_db.add(
+                        KeywordMetrics(
+                            site_id=site_id,
+                            keyword=keyword,
+                            position=pos,
+                            landing_url=url,
+                            frequency=None,
+                            source="ddg",
+                            date=date.today(),
+                            created_at=utcnow(),
+                        )
+                    )
+                    await job_db.commit()
+                except Exception as e:
+                    job_db.add(
+                        AppLog(
+                            level="ERROR",
+                            category="keywords",
+                            method="POST",
+                            path="/api/keywords",
+                            status_code=None,
+                            message=f"positions auto-check failed: {e}",
+                            created_at=utcnow(),
+                        )
+                    )
+                    await job_db.commit()
+
+        background.add_task(_job)
     return {"ok": True, "id": row.id}
+
+
+@router.post("/refresh-positions")
+async def refresh_positions(
+    background: BackgroundTasks,
+    site_id: int = Query(...),
+    limit: int = Query(default=50),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    site = await db.get(Site, int(site_id))
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+
+    limit = max(5, min(100, int(limit)))
+    task = Task(site_id=int(site_id), title=f"Сбор позиций: {site.domain}", description=None, status="in_progress")
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    async def _job():
+        async with AsyncSessionLocal() as job_db:
+            try:
+                rows = (
+                    await job_db.execute(
+                        select(KeywordMetrics.keyword, KeywordMetrics.frequency)
+                        .where(KeywordMetrics.site_id == int(site_id))
+                        .order_by(KeywordMetrics.keyword.asc(), KeywordMetrics.date.desc(), KeywordMetrics.created_at.desc())
+                    )
+                ).all()
+                latest: Dict[str, Optional[int]] = {}
+                for kw, freq in rows:
+                    k = (kw or "").strip()
+                    if not k or k in latest:
+                        continue
+                    latest[k] = int(freq) if freq is not None else None
+
+                checked = 0
+                for k, freq in list(latest.items())[:500]:
+                    pos, url = await position_check_service.check_ddg(keyword=k, domain=site.domain, limit=limit)
+                    job_db.add(
+                        KeywordMetrics(
+                            site_id=int(site_id),
+                            keyword=k,
+                            position=pos,
+                            landing_url=url,
+                            frequency=freq,
+                            source="ddg",
+                            date=date.today(),
+                            created_at=utcnow(),
+                        )
+                    )
+                    checked += 1
+
+                t = await job_db.get(Task, task.id)
+                if t:
+                    t.status = "done"
+                    t.description = f"Проверено ключей: {checked}"
+                    job_db.add(t)
+                job_db.add(
+                    AppLog(
+                        level="INFO",
+                        category="keywords",
+                        method=None,
+                        path=None,
+                        status_code=None,
+                        message=f"positions refresh done site_id={site_id} task_id={task.id} checked={checked}",
+                        created_at=utcnow(),
+                    )
+                )
+                await job_db.commit()
+            except Exception as e:
+                t = await job_db.get(Task, task.id)
+                if t:
+                    t.status = "todo"
+                    t.description = "Ошибка сбора позиций. Проверьте логи."
+                    job_db.add(t)
+                job_db.add(
+                    AppLog(
+                        level="ERROR",
+                        category="keywords",
+                        method=None,
+                        path=None,
+                        status_code=None,
+                        message=f"positions refresh failed site_id={site_id} task_id={task.id}: {e}",
+                        created_at=utcnow(),
+                    )
+                )
+                await job_db.commit()
+
+    if settings.TESTING:
+        await _job()
+        return {"ok": True, "scheduled": False, "task_id": int(task.id)}
+    background.add_task(_job)
+    return {"ok": True, "scheduled": True, "task_id": int(task.id)}
 
 @router.post("/import-csv")
 async def import_keywords_csv(site_id: int = Query(...), file: UploadFile = File(...), db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:

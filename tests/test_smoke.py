@@ -138,6 +138,9 @@ class SmokeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(r.status_code, 200, r.text)
         self.assertIn("imported", r.json())
 
+        r = await self.client.post(f"/api/keywords/refresh-positions?site_id={site['id']}&limit=20")
+        self.assertEqual(r.status_code, 200, r.text)
+
         r = await self.client.get("/api/logs?hours=24&limit=50")
         self.assertEqual(r.status_code, 200, r.text)
         logs24 = r.json()
